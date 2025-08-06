@@ -1,0 +1,6 @@
+*.tsv
+*.json
+*.pt
+*.png
+*.obo
+data
