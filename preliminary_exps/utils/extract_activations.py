@@ -42,14 +42,14 @@ def get_activations(model, tokenizer, instructions, block_modules: List[torch.nn
 
     def mean_hook(layer, cache, n_samples, positions):
         def _hook(module, inputs):
-            act = inputs[0][:, positions, :]          # [B, P, d]
+            act = inputs[0][:, positions, :].to(cache)          # [B, P, d]
             cache[:, layer] += act.sum(0) / n_samples # mean update
         return _hook
 
 
     def sample_hook(layer, cache, positions, batch_start):
         def _hook(module, inputs):
-            act = inputs[0][:, positions, :]              # [B, P, d]
+            act = inputs[0][:, positions, :].to(cache)             # [B, P, d]
             B = act.size(0)
             cache[batch_start:batch_start+B, :, layer, :] = act
         return _hook
@@ -64,10 +64,10 @@ def get_activations(model, tokenizer, instructions, block_modules: List[torch.nn
 
     if store_means:
         # we store the mean activations in high-precision to avoid numerical issues
-        activations = torch.zeros((n_positions, n_layers, d_model), dtype=torch.float64, device=device)
+        activations = torch.zeros((n_positions, n_layers, d_model), dtype=torch.float64, device='cpu')
     else:
         # to avoid mem issues we fallback to .32 precision
-        activations = torch.zeros((n_samples, n_positions, n_layers, d_model), dtype=torch.float32, device=device)
+        activations = torch.zeros((n_samples, n_positions, n_layers, d_model), dtype=torch.float32, device='cpu')
 
     for batch_start in tqdm(range(0, n_samples, batch_size), total = int(n_samples/batch_size)):
         inputs = tokenizer(
