@@ -9,6 +9,9 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import regex as re
 import pandas as pd
+import matplotlib.pyplot as plt
+from pathlib import Path
+from typing import Sequence, Union
 
 try:
     import umap  # pip install umap-learn
@@ -102,6 +105,58 @@ def plot_layerwise_embedding(cache,
     fig.suptitle(f"{method.upper()} projection (positions={positions})")
     fig.tight_layout(rect=[0, 0, 0.93, 0.95])
     return fig
+
+def save_class_signal_plot(
+    acc:        Sequence[float],
+    auc:        Sequence[float],
+    f1:         Sequence[float],
+    fisher:     Sequence[float],
+    rsa_scores: Sequence[float],
+    out_path:   Union[str, Path] = "class_signal_layers.png",
+    dpi: int = 300,
+    show: bool = False,
+) -> Path:
+    """
+    Plot class-signal metrics across layers and save to disk.
+
+    Parameters
+    ----------
+    acc, auc, fisher, rsa_scores : 1-D sequences of equal length
+        Metric values per model layer.
+    out_path : str or Path, default "class_signal_layers.png"
+        Where to write the image (extension determines format).
+    dpi : int, default 200
+        Resolution of the saved image.
+    show : bool, default False
+        If True, also display the figure in the current notebook cell.
+
+    Returns
+    -------
+    Path
+        Absolute path to the saved image.
+    """
+    out_path = Path(out_path).expanduser().resolve()
+
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax.plot(acc,        label="Linear-probe ACC (%)")
+    ax.plot(acc,        label="Linear-probe F1 ")
+    ax.plot(auc,        label="ROC-AUC")
+    ax.plot(fisher,     label="Fisher ratio")
+    ax.plot(rsa_scores, label="RSA tox↔︎non-tox")
+
+    ax.set_xlabel("Layer")
+    ax.set_title("Class signal across layers")
+    ax.legend()
+    fig.tight_layout()
+
+    # Create parent directories if they don't exist
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=dpi)
+    if show:
+        plt.show()
+    plt.close(fig)   # free memory when running in loops
+
+    return out_path
 
 #----------------------------Dataset Exploration & Filters-------------------------------------#
 
