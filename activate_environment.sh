@@ -1,20 +1,28 @@
-echo "🔥 Installing Miniconda…"
-MINI="Miniconda3-latest-Linux-x86_64.sh"
-wget --quiet https://repo.anaconda.com/miniconda/$MINI
-chmod +x $MINI
-./$MINI -b -p "$HOME/miniconda3"
-rm $MINI
+#!/usr/bin/env bash
+set -euo pipefail            # fail fast and echo undefined vars
 
-# Initialize conda in non-interactive shells
-eval "$("$HOME/miniconda3/bin/conda" shell.bash hook)"
-conda init bash
+echo "🔥 Installing Miniconda…"
+MINI="Miniconda3-py310_2025.06-0-Linux-x86_64.sh"   # pin if reproducibility matters
+wget -q https://repo.anaconda.com/miniconda/"$MINI"
+chmod +x "$MINI"
+./"$MINI" -b -p "$HOME/miniconda3"
+rm "$MINI"
 echo "✅ Conda installed."
 
-echo "🔄 Updating conda…"
-conda update -n base -y conda
+# Make conda available *in this shell*
+source "$HOME/miniconda3/etc/profile.d/conda.sh"
 
-echo "Setting up environment..."
+# Accept Anaconda ToS once (non-interactive)
+conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
+conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
 
-conda env create -f environment.yml
+# Clone repo if absent
+[ -d "$HOME/plm-toxicity" ] || git clone https://github.com/manoloFer10/plm-toxicity "$HOME/plm-toxicity"
+cd "$HOME/plm-toxicity"
 
-echo "Done."
+# Create environment in one shot
+conda env create -y -f environment.yml
+
+# Activate for current session
+conda activate plm-toxicity
+echo "🎉 Environment ready."
