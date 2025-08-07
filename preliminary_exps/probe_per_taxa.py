@@ -45,7 +45,7 @@ def benchmark_data(dfs, model, tokenizer, taxa):
 
     # Save plot
     out_path= f"results/probing/within_taxa/{taxa}_signal_layers.png"
-    os.makedirs(out_path, exist_ok=True)
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
 
     path = save_class_signal_plot(
             acc = metrics['accuracy'],
@@ -113,13 +113,13 @@ def main():
 
     # Benchmark logreg on taxa and retrieve 
     regressors = {}
-    for taxa, dfs in filtered_by_taxa.values():
+    for taxa, dfs in filtered_by_taxa.items():
         benchmark_data(dfs, model, tokenizer, taxa)
         #clfs = benchmark_data(dfs, model, tokenizer, taxa)
         #regressors[taxa] = clfs
 
     # # Benchmark logreg 1-1
-    # for taxa, regressor in regressors.values():
+    # for taxa, regressor in regressors.items():
     #     benchmark_all(regressor, taxa, filtered_by_taxa)
 
 
