@@ -24,7 +24,7 @@ conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
 cd plm-toxicity
 conda env create -y -f environment.yml        # -y → no prompt
 conda activate plmTox
-pip install requirements.txt
+pip install -r requirements.txt
 
 echo "🎉  Environment ready, dowloading final pkgs..."
 
