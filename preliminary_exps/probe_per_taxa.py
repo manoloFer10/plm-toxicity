@@ -76,7 +76,7 @@ def get_datasets():
     tox = tox.map(add_eos)
     non_tox = non_tox.map(add_eos)
     
-    return tox, non_tox
+    return tox.to_pandas(), non_tox.to_pandas()
 
 
 def main():
