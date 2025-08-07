@@ -9,4 +9,5 @@ def get_protgpt2():
     protgpt2_tokenizer.padding_side='left'
     protgpt2_tokenizer.pad_token = protgpt2_tokenizer.eos_token
 
+    print('ProtGPT2 model and tokenizer loaded successfully.')
     return protgpt2_model, protgpt2_tokenizer
