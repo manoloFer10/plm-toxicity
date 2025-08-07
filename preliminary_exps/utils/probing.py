@@ -6,6 +6,8 @@ from sklearn.model_selection import train_test_split
 from sklearn import preprocessing
 from tqdm import tqdm
 
+
+
 def layerwise_linear_probe(acts, labels, positions="mean"):
     '''
     Expects acts to be on cpu.
@@ -19,7 +21,7 @@ def layerwise_linear_probe(acts, labels, positions="mean"):
     else:                                    # explicit list/array of idx
         embeds = acts[:, positions, :].reshape(N, L, -1)
 
-    acc, auc, f1 = [], [], []
+    acc, auc, f1, clfs = [], [], [], []
     for l in tqdm(range(L), total = L, desc='Linear Probing of layers'):
         X = embeds[:, l, :]                  # (N, F)
         scaler = preprocessing.StandardScaler().fit(X)
@@ -40,6 +42,7 @@ def layerwise_linear_probe(acts, labels, positions="mean"):
         acc.append( accuracy_score(y_te, y_hat) )
         auc.append( roc_auc_score(y_te, clf.predict_proba(X_te)[:,1]) )
         f1.append( f1_score(y_true=y_te, y_pred=y_hat))
+        #clfs.append(clf)
 
     metrics={
         'accuracy': np.array(acc),
@@ -47,7 +50,7 @@ def layerwise_linear_probe(acts, labels, positions="mean"):
         'f1': np.array(f1)
     }
     
-    return metrics, clf #return the model if so.
+    return metrics #, clfs #return the models if so.
 
 def fisher_ratio(acts, labels, positions="mean", eps=1e-6):
     if positions == "mean":
