@@ -1,7 +1,7 @@
 *.tsv
 *.json
 *.pt
-*.png
+local_images
 *.obo
 data
 __pycache__
