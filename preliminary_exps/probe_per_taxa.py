@@ -3,6 +3,7 @@ from preliminary_exps.utils.probing import layerwise_linear_probe, layerwise_rsa
 from utils.models import get_protgpt2
 from preliminary_exps.utils.visualize_activations import filter_by_top_taxa, save_class_signal_plot
 from datasets import load_dataset
+from tqdm import tqdm
 import torch
 import os
 import pandas as pd
@@ -39,7 +40,7 @@ def benchmark_data(dfs, model, tokenizer, taxa):
         acts_non_tox=acts_non_tox)
     
     #Test
-    metrics, clfs = layerwise_linear_probe(acts_combined, labels)
+    metrics = layerwise_linear_probe(acts_combined, labels)
     f_ratios = fisher_ratio(acts_combined, labels)
     rsa_scores = layerwise_rsa(acts_combined, labels)
 
@@ -113,7 +114,7 @@ def main():
 
     # Benchmark logreg on taxa and retrieve 
     regressors = {}
-    for taxa, dfs in filtered_by_taxa.items():
+    for taxa, dfs in tqdm(filtered_by_taxa.items(), total = len(filtered_by_taxa), desc = 'Probing taxa'):
         benchmark_data(dfs, model, tokenizer, taxa)
         #clfs = benchmark_data(dfs, model, tokenizer, taxa)
         #regressors[taxa] = clfs
