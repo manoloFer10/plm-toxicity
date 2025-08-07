@@ -26,4 +26,7 @@ conda env create -y -f environment.yml        # -y → no prompt
 conda activate plmTox
 pip install requirements.txt
 
-echo "🎉  Environment ready."
+echo "🎉  Environment ready, dowloading final pkgs..."
+
+apt update
+apt install tmux
