@@ -21,8 +21,8 @@ conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
 #  per Anaconda’s blog post):contentReference[oaicite:4]{index=4}
 
 # ── 4. create the project env (run from repo root!)
-cd "$HOME/plm-toxicity"
 conda env create -y -f environment.yml        # -y → no prompt
 conda activate plm-toxicity
+pip install requirements.txt
 
 echo "🎉  Environment ready."
