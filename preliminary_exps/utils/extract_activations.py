@@ -103,9 +103,6 @@ def get_activations_for_datasets(model, tokenizer, tox_seqs, non_tox_seqs, block
     activations_tox = get_activations(model, tokenizer, tox_seqs, block_modules, batch_size=batch_size, positions=positions, store_means=False)
     activations_non_tox = get_activations(model, tokenizer, non_tox_seqs, block_modules, batch_size=batch_size, positions=positions, store_means=False)
 
-    torch.save(activations_tox, f"preliminary_exps/acts/tox_acts.pt")
-    torch.save(activations_non_tox, f"preliminary_exps/acts/non_tox_acts.pt")
-
     return activations_tox, activations_non_tox
 
 

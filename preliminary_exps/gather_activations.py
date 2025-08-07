@@ -2,6 +2,7 @@ from preliminary_exps.utils.extract_activations import get_activations_for_datas
 from utils.models import get_protgpt2
 from datasets import load_dataset
 import torch
+import os
 
 
 def get_data_from_activations(acts_tox, acts_non_tox, device = 'cpu'):
@@ -43,7 +44,14 @@ if __name__ == '__main__':
                                                           tokenizer, 
                                                           tox_seqs, 
                                                           non_tox_seqs, 
-                                                          block_modules = model.transformer.h)
+                                                          block_modules = model.transformer.h,
+                                                          batch_size = 96)
+    
+    os.mkdirs('preliminary_exps/acts/tox_acts.pt',exist_ok=True)
+    os.mkdirs('preliminary_exps/acts/non_tox_acts.pt',exist_ok=True)
+
+    torch.save(acts_tox, f"preliminary_exps/acts/tox_acts.pt")
+    torch.save(acts_non_tox, f"preliminary_exps/acts/non_tox_acts.pt")
 
 
 
