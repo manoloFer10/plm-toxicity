@@ -4,3 +4,4 @@
 *.png
 *.obo
 data
+__pycache__
