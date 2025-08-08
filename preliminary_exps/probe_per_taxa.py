@@ -123,7 +123,7 @@ def main():
     # Benchmark logreg on taxa and retrieve 
     regressors = {}
     for taxa, dfs in tqdm(filtered_by_taxa.items(), total = len(filtered_by_taxa), desc = 'Probing taxa'):
-        benchmark_data(dfs, model, tokenizer, taxa)
+        benchmark_data(dfs, model, tokenizer, taxa, rank)
         #clfs = benchmark_data(dfs, model, tokenizer, taxa)
         #regressors[taxa] = clfs
 
