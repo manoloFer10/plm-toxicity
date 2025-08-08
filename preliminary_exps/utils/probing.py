@@ -58,10 +58,13 @@ def fisher_ratio(acts, labels, positions="mean", eps=1e-6):
     else:                              # e.g. [-1] or "flatten"
         embeds = acts.reshape(acts.shape[0], acts.shape[2], -1)
 
+    tox_mask    = (labels == 1)
+    nontox_mask = (labels == 0)
+
     fisher = []
     for l in tqdm(range(embeds.shape[1]), total = embeds.shape[1], desc='Fisher Ratio of layers'):
         Xl = embeds[:, l, :]           # (N, F)
-        tox, nontox = Xl[labels==0], Xl[labels==1]
+        tox, nontox = Xl[tox_mask], Xl[nontox_mask]
 
         mu_t, mu_nt = tox.mean(0), nontox.mean(0)
         diff = (mu_t - mu_nt).pow(2).sum()
