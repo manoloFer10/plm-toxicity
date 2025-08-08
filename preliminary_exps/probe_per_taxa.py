@@ -20,7 +20,7 @@ def get_data_from_activations(acts_tox, acts_non_tox, device = 'cpu'):
     return acts_combined.cpu(), labels #return everything on cpu for probing algorithms
 
 
-def benchmark_data(dfs, model, tokenizer, taxa):
+def benchmark_data(dfs, model, tokenizer, taxa, taxonomy):
     tox = dfs[0]
     non_toxs = dfs[1]
     tox_sequences = list(tox['Sequence'])
@@ -45,17 +45,25 @@ def benchmark_data(dfs, model, tokenizer, taxa):
     rsa_scores = layerwise_rsa(acts_combined, labels)
 
     # Save plot
-    out_path= f"results/probing/within_taxa/{taxa}_signal_layers.png"
+    out_path= f"results/probing/within_taxa/{taxonomy}/{taxa}_signal_layers.png"
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
 
-    path = save_class_signal_plot(
+    path_fig = save_class_signal_plot(
             acc = metrics['accuracy'],
             auc = metrics['auc'],
             f1 = metrics['f1'],
             fisher= f_ratios,
             rsa_scores = rsa_scores,
             out_path= out_path)
-    print(f'Saved figure results of {taxa} to {path}.')
+    
+    #Save CSV
+    out_path = f'results/probing/within_taxa/{taxonomy}/{taxa}_probing_results_per_layer.csv'
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    df_results = pd.DataFrame(metrics)
+    df_results.T.rename_axis("metric").to_csv(out_path, index=True) # rows as metrics
+
+
+    print(f'Saved results of {taxa} to {path_fig} and {out_path}.')
 
     #return clfs # for pairwise evaluations.
     
@@ -95,12 +103,12 @@ def main():
     #                                                       block_modules = model.transformer.h,
     #                                                       batch_size = 96)
     
-    rank = "phylum"
+    rank = "species"
 
     tox_fam, non_tox_fam = filter_by_top_taxa(
         tox, non_tox,
         rank=rank,
-        n_top=9,
+        n_top=15,
         lineage_col="Taxonomic lineage",
         match_counts=True     # False if you just want to keep *all* matches
     )
