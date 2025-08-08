@@ -10,12 +10,12 @@ import pandas as pd
 
 
 def get_data_from_activations(acts_tox, acts_non_tox, device = 'cpu'):
-    acts_combined = torch.cat([acts_tox, acts_non_tox], dim=0).cpu().numpy()   # [Nt+Nn, P, L, d]
+    acts_combined = torch.cat([acts_tox, acts_non_tox], dim=0).cpu()   # [Nt+Nn, P, L, d]
 
     labels = torch.cat([
         torch.ones(acts_tox.shape[0], dtype=int, device = device),     # 1 = tox
         torch.zeros(acts_non_tox.shape[0], dtype=int, device = device)      # 0 = non-tox
-    ]).numpy()
+    ])
 
     return acts_combined, labels #return everything on cpu for probing algorithms
 
