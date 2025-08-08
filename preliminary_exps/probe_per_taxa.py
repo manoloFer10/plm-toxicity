@@ -10,14 +10,14 @@ import pandas as pd
 
 
 def get_data_from_activations(acts_tox, acts_non_tox, device = 'cpu'):
-    acts_combined = torch.cat([acts_tox, acts_non_tox], dim=0)   # [Nt+Nn, P, L, d]
+    acts_combined = torch.cat([acts_tox, acts_non_tox], dim=0).cpu().numpy()   # [Nt+Nn, P, L, d]
 
     labels = torch.cat([
         torch.ones(acts_tox.shape[0], dtype=int, device = device),     # 1 = tox
         torch.zeros(acts_non_tox.shape[0], dtype=int, device = device)      # 0 = non-tox
-    ])
+    ]).numpy()
 
-    return acts_combined.cpu(), labels #return everything on cpu for probing algorithms
+    return acts_combined, labels #return everything on cpu for probing algorithms
 
 
 def benchmark_data(dfs, model, tokenizer, taxa, taxonomy):
@@ -127,10 +127,14 @@ def main():
         if len(dfs[0])<2 or len(dfs[1])<2 :
             unprocessed[taxa]= dfs
             continue
-        benchmark_data(dfs, model, tokenizer, taxa, rank)
+        else:
+            benchmark_data(dfs, model, tokenizer, taxa, rank)
         #clfs = benchmark_data(dfs, model, tokenizer, taxa)
         #regressors[taxa] = clfs
 
+    def _print_unprocessed(unprocessed):
+        for k,v in unprocessed.items():
+            print(f'Taxa: {k}, Tox:{len(v[0])}, NonTox:{len(v[1])}')
     print(f'Some dataframes had no samples: \n {unprocessed=}.') 
     # # Benchmark logreg 1-1
     # for taxa, regressor in regressors.items():
