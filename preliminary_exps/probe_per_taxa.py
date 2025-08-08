@@ -20,7 +20,7 @@ def get_data_from_activations(acts_tox, acts_non_tox, device = 'cpu'):
     return acts_combined, labels #return everything on cpu for probing algorithms
 
 
-def benchmark_data(dfs, model, tokenizer, taxa, taxonomy):
+def get_acts(dfs, model, tokenizer):
     tox = dfs[0]
     non_toxs = dfs[1]
     tox_sequences = list(tox['Sequence'])
@@ -33,7 +33,18 @@ def benchmark_data(dfs, model, tokenizer, taxa, taxonomy):
                                                           non_tox_sequences, 
                                                           block_modules = model.transformer.h,
                                                           batch_size = 96)
+
+    return acts_tox, acts_non_tox
+
+
+def benchmark_data(acts_tox, acts_non_tox, taxa, taxonomy, is_full=False):
     
+    #Define prefix
+    if is_full:
+        prefix='Full_'
+    else:
+        prefix=''
+
     #Transform data for probing
     acts_combined, labels = get_data_from_activations(
         acts_tox=acts_tox,
@@ -45,7 +56,7 @@ def benchmark_data(dfs, model, tokenizer, taxa, taxonomy):
     rsa_scores = layerwise_rsa(acts_combined, labels)
 
     # Save plot
-    out_path= f"results/probing/within_taxa/{taxonomy}/{taxa}_signal_layers.png"
+    out_path= f"results/probing/within_taxa/{taxonomy}/{prefix}{taxa}_signal_layers.png"
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
 
     path_fig = save_class_signal_plot(
@@ -57,7 +68,7 @@ def benchmark_data(dfs, model, tokenizer, taxa, taxonomy):
             out_path= out_path)
     
     #Save CSV
-    out_path = f'results/probing/within_taxa/{taxonomy}/{taxa}_probing_results_per_layer.csv'
+    out_path = f'results/probing/within_taxa/{taxonomy}/{prefix}{taxa}_probing_results_per_layer.csv'
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     df_results = pd.DataFrame(metrics)
     df_results.T.rename_axis("metric").to_csv(out_path, index=True) # rows as metrics
@@ -65,7 +76,7 @@ def benchmark_data(dfs, model, tokenizer, taxa, taxonomy):
 
     print(f'Saved results of {taxa} to {path_fig} and {out_path}.')
 
-    #return clfs # for pairwise evaluations.
+    #return acts_combined, labels
     
 
 #def benchmark_all(regressor, taxa, dfs):
@@ -92,16 +103,6 @@ def main():
     model, tokenizer = get_protgpt2()
 
     tox, non_tox = get_datasets()
-
-    # tox_seqs = list(tox['Sequence'])
-    # non_tox_seqs = list(non_tox['Sequence'])
-
-    # acts_tox, acts_non_tox = get_activations_for_datasets(model, 
-    #                                                       tokenizer, 
-    #                                                       tox_seqs, 
-    #                                                       non_tox_seqs, 
-    #                                                       block_modules = model.transformer.h,
-    #                                                       batch_size = 96)
     
     rank = "species"
 
@@ -121,14 +122,19 @@ def main():
     }
 
     # Benchmark logreg on taxa and retrieve 
-    regressors = {}
     unprocessed={}
+    all_tox_acts, all_nontox_acts = [], []
     for taxa, dfs in tqdm(filtered_by_taxa.items(), total = len(filtered_by_taxa), desc = 'Probing taxa'):
         if len(dfs[0])<2 or len(dfs[1])<2 :
             unprocessed[taxa]= dfs
             continue
         else:
-            benchmark_data(dfs, model, tokenizer, taxa, rank)
+            #Extract activations
+            acts_tox, acts_non_tox = get_acts(dfs, model, tokenizer)
+            all_tox_acts.append(acts_tox)
+            all_nontox_acts.append(acts_non_tox)
+
+            benchmark_data(acts_tox, acts_non_tox, taxa, rank)
         #clfs = benchmark_data(dfs, model, tokenizer, taxa)
         #regressors[taxa] = clfs
 
@@ -139,8 +145,11 @@ def main():
     print(f'Some dataframes had no samples: \n {_print_unprocessed(unprocessed)}.')
     unprocessed_non_tox = sum([len(v[1]) for k,v in unprocessed.items()])
     unprocessed_tox = sum([len(v[0]) for k,v in unprocessed.items()])
+
+    benchmark_data(all_tox_acts, all_nontox_acts,taxa, rank, is_full=True)
+
     print(f'Processed {len(tox_fam)-unprocessed_tox} toxic samples and {len(non_tox_fam)-unprocessed_non_tox} non-toxic samples.') 
-    # # Benchmark logreg 1-1
+    # Benchmark logreg 1-1
     # for taxa, regressor in regressors.items():
     #     benchmark_all(regressor, taxa, filtered_by_taxa)
 
