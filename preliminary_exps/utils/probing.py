@@ -1,8 +1,8 @@
 import numpy as np
 import torch
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, roc_auc_score, f1_score, make_scorer
-from sklearn.model_selection import train_test_split, StratifiedKFold, GridSearchCV
+from sklearn.metrics import accuracy_score, roc_auc_score, f1_score, make_scorer, precision_recall_curve
+from sklearn.model_selection import train_test_split, cross_val_predict, StratifiedKFold, GridSearchCV
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
 from tqdm import tqdm
@@ -95,8 +95,13 @@ def layerwise_linear_probe(acts, labels, positions="mean"):
             search.fit(X_tr, y_tr)
             best_model = search.best_estimator_
 
-        y_proba = best_model.predict_proba(X_te)[:, 1]
-        y_hat = best_model.predict(X_te)
+        oof = cross_val_predict(best_model, X_tr, y_tr, cv=skf, method="predict_proba")[:,1]
+        prec, rec, thr = precision_recall_curve(y_tr, oof)
+        f1s = 2*prec*rec/(prec+rec+1e-12)
+        best_thr = thr[f1s[:-1].argmax()] if len(thr) else 0.5  # choose on train only
+
+        y_proba = best_model.predict_proba(X_te)[:,1]
+        y_hat   = (y_proba >= best_thr).astype(int)
 
         # Metrics
         acc.append(accuracy_score(y_te, y_hat))

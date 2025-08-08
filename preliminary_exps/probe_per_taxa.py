@@ -135,8 +135,7 @@ def main():
             all_nontox_acts.append(acts_non_tox)
 
             benchmark_data(acts_tox, acts_non_tox, taxa, rank)
-        #clfs = benchmark_data(dfs, model, tokenizer, taxa)
-        #regressors[taxa] = clfs
+
 
     def _print_unprocessed(unprocessed):
         for k,v in unprocessed.items():
