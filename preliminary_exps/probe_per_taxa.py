@@ -139,12 +139,15 @@ def main():
 
     def _print_unprocessed(unprocessed):
         for k,v in unprocessed.items():
-            print(f'Taxa: {k}, Tox:{len(v[0])}, NonTox:{len(v[1])}')
+            to_print+=f'Taxa: {k}, Tox:{len(v[0])}, NonTox:{len(v[1])}\n'
+        return to_print
 
     print(f'Some dataframes had no samples: \n {_print_unprocessed(unprocessed)}.')
     unprocessed_non_tox = sum([len(v[1]) for k,v in unprocessed.items()])
     unprocessed_tox = sum([len(v[0]) for k,v in unprocessed.items()])
 
+    all_tox_acts= torch.cat(all_tox_acts,dim=0)
+    all_nontox_acts= torch.cat(all_nontox_acts, dim=0)
     benchmark_data(all_tox_acts, all_nontox_acts,taxa, rank, is_full=True)
 
     print(f'Processed {len(tox_fam)-unprocessed_tox} toxic samples and {len(non_tox_fam)-unprocessed_non_tox} non-toxic samples.') 
