@@ -1,12 +1,20 @@
 import numpy as np
 import torch
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, roc_auc_score, f1_score
+from sklearn.metrics import accuracy_score, roc_auc_score, f1_score, make_scorer
 from sklearn.model_selection import train_test_split, StratifiedKFold, GridSearchCV
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
 from tqdm import tqdm
 
+
+
+def _safe_auc_for_cv(y_true, y_score):
+    if np.unique(y_true).size < 2:
+        return 0.5  # neutral baseline to avoid NaNs & warnings
+    return roc_auc_score(y_true, y_score)
+
+safe_auc_scorer = make_scorer(_safe_auc_for_cv, needs_proba=True, greater_is_better=True)
 
 
 def layerwise_linear_probe(acts, labels, positions="mean"):
@@ -49,19 +57,36 @@ def layerwise_linear_probe(acts, labels, positions="mean"):
 
         # Hold-out split (kept clean). Stratified to maintain ratios.
         X_tr, X_te, y_tr, y_te = train_test_split(
-            X, y, test_size=0.30, random_state=42, stratify=y
+            X, y, test_size=0.20, random_state=42, stratify=y
         )
 
-        search = GridSearchCV(
-            estimator=pipe,
-            param_grid=param_grid,
-            cv=skf,
-            scoring="roc_auc",     
-            n_jobs=-1,
-            refit=True
-        )
-        search.fit(X_tr, y_tr)
-        best_model = search.best_estimator_
+        # decide inner CV based on y_tr 
+        binc = np.bincount(y_tr)
+        min_class_tr = binc.min() if binc.size > 1 else 0
+
+        if min_class_tr < 2:
+            # Too few minority examples to run stratified CV safely
+            best_model = Pipeline([
+                ("scaler", StandardScaler()),
+                ("clf", LogisticRegression(
+                    solver="liblinear", max_iter=2000, class_weight="balanced", C=1.0
+                ))
+            ])
+            best_model.fit(X_tr, y_tr)
+        else:
+            n_splits = max(2, min(5, int(min_class_tr)))
+            skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
+
+            search = GridSearchCV(
+                estimator=pipe,
+                param_grid=param_grid,
+                cv=skf,
+                scoring=safe_auc_scorer,        # <- safe, no NaN/ warnings
+                n_jobs=-1,
+                refit=True
+            )
+            search.fit(X_tr, y_tr)
+            best_model = search.best_estimator_
 
         y_proba = best_model.predict_proba(X_te)[:, 1]
         y_hat = best_model.predict(X_te)
