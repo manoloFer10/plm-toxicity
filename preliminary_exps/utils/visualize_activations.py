@@ -138,7 +138,7 @@ def save_class_signal_plot(
     Right axis: Fisher scaled to [0,1] (robust or min-max).
     """
     out_path = Path(out_path).expanduser().resolve()
-    Ls = [len(acc), len(auc), len(f1), len(fisher), len(rsa_scores)]
+    Ls = [len(acc), len(auc), len(f1), len(rsa_scores)]
     if len(set(Ls)) != 1:
         raise ValueError(f"All metric sequences must have equal length, got {Ls}")
 

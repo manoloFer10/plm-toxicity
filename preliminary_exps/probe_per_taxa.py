@@ -113,8 +113,6 @@ def main():
         match_counts=True     # False if you just want to keep *all* matches
     )
 
-    print(tox_fam[tox_fam[rank]=='Streptococcus pyogenes'])
-
     top_taxa = tox_fam[rank].unique()
 
     filtered_by_taxa = {
