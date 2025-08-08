@@ -74,13 +74,13 @@ def benchmark_data(dfs, model, tokenizer, taxa, taxonomy):
 
 def get_datasets():
     def add_eos(example):
-        example['Sequence'] = example['Sequence'] + '<|endoftext|>'
+        example['Sequence'] =  '<|endoftext|>' + example['Sequence'] + '<|endoftext|>'
         return example
     
     data=load_dataset('manufernandezbur/uniref50')['train']
     
-    tox = data.filter(lambda example: example['Toxin'] and example['Length']<300)
-    non_tox = data.filter(lambda example: not example['Toxin'] and example['Length']<300)
+    tox = data.filter(lambda example: example['Toxin']) #and example['Length']<300)
+    non_tox = data.filter(lambda example: not example['Toxin']) #and example['Length']<300)
 
     tox = tox.map(add_eos)
     non_tox = non_tox.map(add_eos)
