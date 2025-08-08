@@ -120,25 +120,47 @@ def layerwise_rsa(acts, labels, positions="mean"):
     else:
         embeds = acts.reshape(acts.shape[0], acts.shape[2], -1).cpu().numpy()
 
-    tox = (labels.cpu().numpy() == 1)
-    nt  = (labels.cpu().numpy() == 0)
+    y = labels.cpu().numpy()
+    tox_mask = (y == 1)
+    nt_mask  = (y == 0)
 
     def _safe_norm_rows(X, eps=1e-12):
         n = np.linalg.norm(X, axis=1, keepdims=True)
         return X / np.clip(n, eps, None)
 
-    rsa = []
-    for l in tqdm(range(embeds.shape[1]), total=embeds.shape[1], desc='RSA of layers', leave=True):
-        Xt, Xn = embeds[tox, l, :], embeds[nt, l, :]
-        if Xt.shape[0] < 2 or Xn.shape[0] < 2:
-            rsa.append(np.nan); continue
-        Xt, Xn = _safe_norm_rows(Xt), _safe_norm_rows(Xn)
-        rdm_t = 1 - Xt @ Xt.T
-        rdm_n = 1 - Xn @ Xn.T
-        iu = np.triu_indices_from(rdm_t, k=1)
-        vt, vn = rdm_t[iu], rdm_n[iu]
-        if (np.isnan(vt).any() or np.isnan(vn).any() or
-            np.std(vt) == 0 or np.std(vn) == 0):
-            rsa.append(np.nan); continue
-        rsa.append(np.corrcoef(vt, vn)[0, 1])
-    return np.array(rsa)   # 1 ≈ identical geometry, 0 ≈ unrelated
+    rng = np.random.default_rng(0)
+    L = embeds.shape[1]
+    rsa_scores = []
+
+    for l in tqdm(range(L), total=L, desc='RSA of layers', leave=True):
+        Xt = embeds[tox_mask, l, :]   # (n_t, F)
+        Xn = embeds[nt_mask,  l, :]   # (n_n, F)
+        n_t, n_n = Xt.shape[0], Xn.shape[0]
+
+        m = min(n_t, n_n)
+
+        boot_corrs = []
+        for b in range(max(1, 3)):
+            # reproducible but layer- and boot-variant sampling
+            idx_t = rng.choice(n_t, size=m, replace=False)
+            idx_n = rng.choice(n_n, size=m, replace=False)
+
+            Xt_s = _safe_norm_rows(Xt[idx_t])
+            Xn_s = _safe_norm_rows(Xn[idx_n])
+
+            rdm_t = 1.0 - Xt_s @ Xt_s.T      # (m, m)
+            rdm_n = 1.0 - Xn_s @ Xn_s.T      # (m, m)
+
+            iu = np.triu_indices(m, k=1)
+            vt, vn = rdm_t[iu], rdm_n[iu]
+
+            # guard degeneracy
+            if (np.isnan(vt).any() or np.isnan(vn).any() or
+                np.std(vt) == 0.0 or np.std(vn) == 0.0):
+                continue
+
+            boot_corrs.append(np.corrcoef(vt, vn)[0, 1])
+
+        rsa_scores.append(np.nanmean(boot_corrs) if boot_corrs else np.nan)
+
+    return np.array(rsa_scores)   # 1 ≈ identical geometry, 0 ≈ unrelated
