@@ -19,6 +19,18 @@ try:
 except ImportError:
     HAS_UMAP = False
 
+try:
+    import plotly.express as px
+    HAS_PLOTLY = True
+except Exception:
+    HAS_PLOTLY = False
+
+try:
+    import networkx as nx
+    HAS_NX = True
+except Exception:
+    HAS_NX = False
+
 
 def _prep_embeddings(cache: torch.Tensor,
                      layer: int,
@@ -136,27 +148,278 @@ def save_class_signal_plot(
         Absolute path to the saved image.
     """
     out_path = Path(out_path).expanduser().resolve()
+    
+    fig, ax = plt.subplots(figsize=(7.2, 4.2))
+    left_ylim = (0, 1)
 
-    fig, ax = plt.subplots(figsize=(6, 4))
-    ax.plot(acc,        label="Linear-probe ACC (%)")
-    ax.plot(acc,        label="Linear-probe F1 ")
-    ax.plot(auc,        label="ROC-AUC")
-    ax.plot(fisher,     label="Fisher ratio")
-    ax.plot(rsa_scores, label="RSA tox↔︎non-tox")
+    # Left axis (primary)
+    l_acc, = ax.plot(acc,        label="Accuracy")
+    l_f1,  = ax.plot(f1,         label="F1")
+    l_auc, = ax.plot(auc,        label="ROC-AUC")
+    l_rsa, = ax.plot(rsa_scores, label="RSA tox↔non-tox")
 
     ax.set_xlabel("Layer")
+    ax.set_ylabel("Score")
     ax.set_title("Class signal across layers")
-    ax.legend()
+
+    ax.grid(True, alpha=0.25)
+
+    # Right axis (Fisher raw)
+    ax2 = ax.twinx()
+    l_fis, = ax2.plot(fisher, label="Fisher (raw)", linestyle="--", linewidth=1.5, color="black")
+    ax2.set_ylabel("Fisher ratio (raw)")
+    
+    p99 = float(np.nanpercentile(fisher, 99)) if np.isfinite(np.nanmax(fisher)) else 1.0
+    ax2.set_ylim(0, max(1e-12, p99 * 1.05))
+
+    # One combined legend
+    lines = [l_acc, l_f1, l_auc, l_rsa, l_fis]
+    labels = [ln.get_label() for ln in lines]
+    ax.legend(lines, labels, loc="upper left", frameon=False, ncol=2)
+
     fig.tight_layout()
 
-    # Create parent directories if they don't exist
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_path, dpi=dpi)
     if show:
         plt.show()
-    plt.close(fig)   # free memory when running in loops
-
+    plt.close(fig)
     return out_path
+
+# -------------------------------------------------------------------------------Taxonomic tree
+
+RANK_ORDER   = ["domain","phylum","class","order","family","genus","species"]
+RANK_ALIASES = {
+    "superkingdom":"domain",
+    "division":"phylum","superphylum":"phylum","subphylum":"phylum",
+    "superclass":"class","subclass":"class",
+    "suborder":"order",
+    "superfamily":"family","subfamily":"family","tribe":"family",
+    "subgenus":"genus",
+    "clade":None,"no rank":None,"informal":None,"group":None,
+}
+
+def _norm_rank(r):
+    if not r: return None
+    r = r.strip().lower()
+    return RANK_ALIASES.get(r, r)
+
+_species_from_org = re.compile(r'^\s*([A-Z][a-zA-Z_-]+)\s+([a-z][a-zA-Z0-9._-]+)')
+def _extract_species_from_organism(org: str|None) -> tuple[str|None, str|None]:
+    """Return (genus, species) parsed from Organism or (None,None)."""
+    if not isinstance(org, str): return (None, None)
+    org = org.split(" (", 1)[0]                 # drop common name/strain
+    m = _species_from_org.match(org)
+    if not m: return (None, None)
+    genus = m.group(1)
+    species = f"{genus} {m.group(2)}"
+    return (genus, species)
+
+def parse_lineage_ordered_with_species(lineage: str,
+                                       organism: str|None = None,
+                                       ranks = RANK_ORDER) -> list[str|None]:
+    seen = {}
+    if isinstance(lineage, str):
+        for token in _r_split.split(lineage):
+            m = _r_extract.match(token)
+            if m:
+                name, raw_rank = m.groups()
+                r = _norm_rank(raw_rank)
+                if r and r not in seen:
+                    seen[r] = name.strip()
+
+    # species/genus fallback from Organism
+    if "species" not in seen or "genus" not in seen:
+        g, sp = _extract_species_from_organism(organism)
+        if "genus" not in seen and g:   seen["genus"]   = g
+        if "species" not in seen and sp: seen["species"] = sp
+
+    path = [seen.get(r, None) for r in ranks]
+    return path
+
+def _fill_holes_for_plotly(paths_df: pd.DataFrame, ranks: list[str]) -> pd.DataFrame:
+    """
+    Ensure there are no None in intermediate ranks when deeper ranks exist,
+    by filling with 'Unknown <rank> in <parent>'.
+    """
+    df = paths_df.copy()
+    # Fill left-to-right so parents are always non-null before we use them
+    df[ranks[0]] = df[ranks[0]].fillna("Unknown domain")
+    for i in range(1, len(ranks)):
+        r = ranks[i]; parent = ranks[i-1]
+        need = df[r].isna() & df[parent].notna()
+        if need.any():
+            df.loc[need, r] = df.loc[need, parent].apply(lambda p: f"Unknown {r} in {p}")
+    return df
+
+def _build_path_table_species(df: pd.DataFrame,
+                              lineage_col="Taxonomic lineage",
+                              organism_col="Organism",
+                              ranks = RANK_ORDER) -> pd.DataFrame:
+    # build raw paths row-wise (no aggregation yet)
+    rows = df.apply(
+        lambda row: parse_lineage_ordered_with_species(
+            row.get(lineage_col, None),
+            row.get(organism_col, None),
+            ranks=ranks
+        ),
+        axis=1
+    )
+    paths = pd.DataFrame(rows.tolist(), columns=ranks)
+
+    # fill missing genus from species if still absent (safety net)
+    if "genus" in ranks and "species" in ranks:
+        gi = ranks.index("genus"); si = ranks.index("species")
+        mask = paths.iloc[:, si].notna() & paths.iloc[:, gi].isna()
+        paths.loc[mask, ranks[gi]] = paths.loc[mask, ranks[si]].str.split().str[0]
+
+    # fill holes so Plotly sunburst accepts the hierarchy
+    paths = _fill_holes_for_plotly(paths, ranks)
+
+    # aggregate to counts
+    counts = paths.groupby(ranks).size().reset_index(name="Count")
+    return counts
+
+def _prune_tree(counts: pd.DataFrame,
+                ranks: list[str],
+                min_count_leaf: int = 5,
+                max_children: int = 15) -> pd.DataFrame:
+    df = counts.copy()
+    # keep only species with at least min_count_leaf
+    df = df[df["Count"] >= min_count_leaf].copy()
+    if df.empty: return df
+
+    # cap children per parent for readability (except at species)
+    for i in range(len(ranks)-1):
+        parent_cols = ranks[:i+1]
+        child_col   = ranks[i+1]
+        keep_mask = pd.Series(False, index=df.index)
+        for _, grp in df.groupby(parent_cols, dropna=False):
+            child_counts = (grp.groupby(child_col, dropna=False)["Count"]
+                              .sum().sort_values(ascending=False))
+            keep_vals = set(child_counts.head(max_children).index.tolist())
+            keep_mask.loc[grp.index] = grp[child_col].isin(keep_vals)
+        drop_idx = df.index[~keep_mask]
+        if len(drop_idx):
+            df.loc[drop_idx, child_col] = "Other"
+            for j in range(i+2, len(ranks)):
+                df.loc[drop_idx, ranks[j]] = None
+            df = (df.groupby(ranks, dropna=False)["Count"].sum().reset_index())
+    return df
+
+def plot_taxonomic_tree_species(df: pd.DataFrame,
+                                data_name: str = "",
+                                lineage_col: str = "Taxonomic lineage",
+                                organism_col: str = "Organism",
+                                ranks: tuple[str,...] = ("domain","phylum","class","order","family","genus","species"),
+                                min_count_leaf: int = 5,
+                                max_children: int = 15,
+                                prefer_plotly: bool = True):
+    ranks = list(ranks)
+    counts = _build_path_table_species(df, lineage_col, organism_col, ranks)
+    counts = _prune_tree(counts, ranks, min_count_leaf=min_count_leaf, max_children=max_children)
+    if counts.empty:
+        print("[warn] Nothing to plot; try lowering min_count_leaf."); return None
+
+    title = f"{data_name} · Taxonomic tree (species counts)"
+
+    if prefer_plotly and HAS_PLOTLY:
+        fig = px.sunburst(
+            counts, path=ranks, values="Count",
+            branchvalues="total", title=title
+        )
+        fig.update_traces(textinfo="label+value",
+                          hovertemplate="<b>%{label}</b><br>n=%{value}<extra></extra>")
+        fig.update_layout(margin=dict(t=60, l=10, r=10, b=10))
+        fig.show()
+        return fig
+
+
+    # ---------- Fallback: radial tree with species labels + counts ----------
+    if not HAS_NX:
+        raise RuntimeError("Install plotly or networkx to draw the tree.")
+    import numpy as np
+    from math import cos, sin, pi
+    G = nx.DiGraph()
+
+    # add nodes with aggregated counts at each prefix
+    def prefix_counts(depth):
+        prefix_cols = ranks[:depth+1]
+        return (counts.groupby(prefix_cols, dropna=False)["Count"]
+                      .sum().reset_index())
+
+    for depth in range(len(ranks)):
+        for _, row in prefix_counts(depth).iterrows():
+            path = tuple(row[c] for c in ranks[:depth+1])
+            G.add_node((depth, path),
+                       name=path[-1] if path and path[-1] is not None else "root",
+                       depth=depth,
+                       count=int(row["Count"]))
+
+    for depth in range(1, len(ranks)):
+        parents = ranks[:depth]; childs = ranks[:depth+1]
+        edges = (counts.groupby(childs, dropna=False)["Count"].sum().reset_index())
+        for _, row in edges.iterrows():
+            parent = tuple(row[c] for c in parents)
+            child  = tuple(row[c] for c in childs)
+            G.add_edge((depth-1,parent), (depth,child))
+
+    # virtual root if multiple domains
+    roots = [n for n in G.nodes if n[0]==0]
+    if len(roots)>1:
+        R = ("root", ("__ROOT__",))
+        G.add_node(R, name="root", depth=-1, count=sum(G.nodes[n]["count"] for n in roots))
+        for n in roots: G.add_edge(R, n)
+        root = R
+    else:
+        root = roots[0]
+
+    def subtree_size(n): return G.nodes[n]["count"]
+    pos = {}
+    def layout(node, r0, rstep, t0, t1):
+        pos[node] = (r0*cos((t0+t1)/2), r0*sin((t0+t1)/2))
+        children = list(G.successors(node))
+        if not children: return
+        tot = sum(subtree_size(c) for c in children)
+        θ = t0
+        for c in sorted(children, key=subtree_size, reverse=True):
+            span = (t1-t0) * (subtree_size(c)/tot)
+            layout(c, r0+rstep, rstep, θ, θ+span)
+            θ += span
+
+    max_depth = max(d for d,_ in G.nodes)
+    layout(root, r0=0.5, rstep=1.0, t0=0, t1=2*pi)
+
+    fig, ax = plt.subplots(figsize=(9,9))
+    # edges
+    for u,v in G.edges():
+        x0,y0 = pos[u]; x1,y1 = pos[v]
+        ax.plot([x0,x1],[y0,y1], lw=0.5, color="#AAAAAA", alpha=0.7)
+    # nodes
+    for n in G.nodes():
+        x,y = pos[n]; d,_ = n
+        ax.scatter([x],[y], s=12+2*np.sqrt(subtree_size(n)), zorder=3)
+    # labels: include counts ONLY for species level to avoid clutter
+    species_depth = len(ranks)-1
+    for n in G.nodes():
+        d, path = n
+        if d == species_depth:
+            name = G.nodes[n]["name"]
+            if name and name != "root":
+                x,y = pos[n]
+                ax.text(x, y, f"{name} ({G.nodes[n]['count']})",
+                        ha="center", va="center", fontsize=7)
+        elif d <= 2:  # annotate higher ranks lightly
+            name = G.nodes[n]["name"]
+            if name and name != "root":
+                x,y = pos[n]
+                ax.text(x, y, name, ha="center", va="center", fontsize=8)
+
+    ax.set_aspect("equal"); ax.axis("off")
+    ax.set_title(title)
+    fig.tight_layout()
+    return fig
+
 
 #----------------------------Dataset Exploration & Filters-------------------------------------#
 
