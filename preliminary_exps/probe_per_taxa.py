@@ -135,7 +135,11 @@ def main():
     def _print_unprocessed(unprocessed):
         for k,v in unprocessed.items():
             print(f'Taxa: {k}, Tox:{len(v[0])}, NonTox:{len(v[1])}')
-    print(f'Some dataframes had no samples: \n {unprocessed=}.') 
+
+    print(f'Some dataframes had no samples: \n {_print_unprocessed(unprocessed)}.')
+    unprocessed_non_tox = sum([len(v[1]) for k,v in unprocessed.items()])
+    unprocessed_tox = sum([len(v[0]) for k,v in unprocessed.items()])
+    print(f'Processed {len(tox_fam)-unprocessed_tox} toxic samples and {len(non_tox_fam)-unprocessed_non_tox} non-toxic samples.') 
     # # Benchmark logreg 1-1
     # for taxa, regressor in regressors.items():
     #     benchmark_all(regressor, taxa, filtered_by_taxa)
