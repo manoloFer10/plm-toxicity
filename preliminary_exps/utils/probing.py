@@ -50,12 +50,19 @@ def layerwise_linear_probe(acts, labels, positions="mean"):
         "clf__class_weight": [None, "balanced"],
     }
 
+     # Custom scorer: signature (estimator, X, y)
+    def safe_auc_scorer(estimator, X, y):
+        y_proba = estimator.predict_proba(X)[:, 1]
+        if np.unique(y).size < 2:
+            return 0.5  # neutral baseline when validation fold is single-class
+        return roc_auc_score(y, y_proba)
+
     acc, auc, f1, bal_acc, ap = [], [], [], [], []
 
     for l in tqdm(range(L), total=L, desc='Linear Probing of layers', leave=True):
         X = embeds[:, l, :].cpu().numpy()
 
-        # Hold-out split (kept clean). Stratified to maintain ratios.
+        # Hold-out split. Stratified to maintain ratios.
         X_tr, X_te, y_tr, y_te = train_test_split(
             X, y, test_size=0.20, random_state=42, stratify=y
         )
@@ -81,7 +88,7 @@ def layerwise_linear_probe(acts, labels, positions="mean"):
                 estimator=pipe,
                 param_grid=param_grid,
                 cv=skf,
-                scoring=safe_auc_scorer,        # <- safe, no NaN/ warnings
+                scoring=safe_auc_scorer,        
                 n_jobs=-1,
                 refit=True
             )
