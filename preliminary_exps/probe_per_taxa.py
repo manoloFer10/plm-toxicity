@@ -79,8 +79,8 @@ def get_datasets():
     
     data=load_dataset('manufernandezbur/uniref50')['train']
     
-    tox = data.filter(lambda example: example['Toxin']) #and example['Length']<300)
-    non_tox = data.filter(lambda example: not example['Toxin']) #and example['Length']<300)
+    tox = data.filter(lambda example: example['Toxin'] and example['Length']<1000)
+    non_tox = data.filter(lambda example: not example['Toxin'] and example['Length']<1000)
 
     tox = tox.map(add_eos)
     non_tox = non_tox.map(add_eos)

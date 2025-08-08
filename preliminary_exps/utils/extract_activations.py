@@ -69,7 +69,7 @@ def get_activations(model, tokenizer, instructions, block_modules: List[torch.nn
         # to avoid mem issues we fallback to .32 precision
         activations = torch.zeros((n_samples, n_positions, n_layers, d_model), dtype=torch.float32, device='cpu')
 
-    for batch_start in tqdm(range(0, n_samples, batch_size), total = int(n_samples/batch_size), desc='Getting activations for samples.'):
+    for batch_start in tqdm(range(0, n_samples, batch_size), total = int(n_samples/batch_size), desc='Getting activations for samples'):
         inputs = tokenizer(
             instructions[batch_start:batch_start+batch_size],
             return_tensors="pt",
