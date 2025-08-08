@@ -41,7 +41,7 @@ def benchmark_data(dfs, model, tokenizer, taxa, taxonomy):
     
     #Test
     metrics = layerwise_linear_probe(acts_combined, labels)
-    f_ratios = fisher_ratio(acts_combined, labels)
+    #f_ratios = fisher_ratio(acts_combined, labels)
     rsa_scores = layerwise_rsa(acts_combined, labels)
 
     # Save plot
@@ -52,7 +52,7 @@ def benchmark_data(dfs, model, tokenizer, taxa, taxonomy):
             acc = metrics['accuracy'],
             auc = metrics['auc'],
             f1 = metrics['f1'],
-            fisher= f_ratios,
+            #fisher= f_ratios,
             rsa_scores = rsa_scores,
             out_path= out_path)
     
@@ -112,6 +112,8 @@ def main():
         lineage_col="Taxonomic lineage",
         match_counts=True     # False if you just want to keep *all* matches
     )
+
+    print(tox_fam[tox_fam[rank].isin('Streptococcus pyogenes')])
 
     top_taxa = tox_fam[rank].unique()
 

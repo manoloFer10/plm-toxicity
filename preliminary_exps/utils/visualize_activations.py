@@ -122,13 +122,13 @@ def save_class_signal_plot(
     acc:        Sequence[float],
     auc:        Sequence[float],
     f1:         Sequence[float],
-    fisher:     Sequence[float],
+    #fisher:     Sequence[float],
     rsa_scores: Sequence[float],
     out_path:   Union[str, Path] = "class_signal_layers.png",
     dpi: int = 300,
     show: bool = False,
     *,
-    left_ylim: tuple[float, float] | None = (0, 1),   # None → auto
+    left_ylim: tuple[float, float] | None = (0, 1.05),   # None → auto
     fisher_scale: str = "robust",                     # "robust" | "minmax"
     fisher_clip: tuple[int,int] = (2, 98),            # used when robust
     legend_loc: str = "upper left",
@@ -142,17 +142,17 @@ def save_class_signal_plot(
     if len(set(Ls)) != 1:
         raise ValueError(f"All metric sequences must have equal length, got {Ls}")
 
-    fisher = np.asarray(fisher, float)
-    # --- scale Fisher to [0,1] ---
-    if fisher_scale == "robust":
-        lo, hi = np.nanpercentile(fisher, list(fisher_clip))
-    elif fisher_scale == "minmax":
-        lo, hi = np.nanmin(fisher), np.nanmax(fisher)
-    else:
-        raise ValueError("fisher_scale must be 'robust' or 'minmax'")
-    if not np.isfinite(lo) or not np.isfinite(hi) or hi <= lo:
-        lo, hi = np.nanmin(fisher), np.nanmax(fisher)  # fallback
-    fisher_scaled = np.clip((fisher - lo) / (hi - lo + 1e-12), 0, 1)
+    # fisher = np.asarray(fisher, float)
+    # # --- scale Fisher to [0,1] ---
+    # if fisher_scale == "robust":
+    #     lo, hi = np.nanpercentile(fisher, list(fisher_clip))
+    # elif fisher_scale == "minmax":
+    #     lo, hi = np.nanmin(fisher), np.nanmax(fisher)
+    # else:
+    #     raise ValueError("fisher_scale must be 'robust' or 'minmax'")
+    # if not np.isfinite(lo) or not np.isfinite(hi) or hi <= lo:
+    #     lo, hi = np.nanmin(fisher), np.nanmax(fisher)  # fallback
+    # fisher_scaled = np.clip((fisher - lo) / (hi - lo + 1e-12), 0, 1)
 
     # --- plot ---
     fig, ax = plt.subplots(figsize=(7.2, 4.2))
@@ -170,16 +170,16 @@ def save_class_signal_plot(
     ax.grid(True, alpha=0.25)
 
     # right axis for Fisher (scaled 0–1)
-    ax2 = ax.twinx()
-    l_fis, = ax2.plot(
-        fisher_scaled, linestyle="--", linewidth=1.8, color="black",
-        label=f"Fisher (scaled, {fisher_scale})"
-    )
-    ax2.set_ylabel("Fisher (scaled 0–1)")
-    ax2.set_ylim(0, 1)
+    # ax2 = ax.twinx()
+    # l_fis, = ax2.plot(
+    #     fisher_scaled, linestyle="--", linewidth=1.8, color="black",
+    #     label=f"Fisher (scaled, {fisher_scale})"
+    # )
+    # ax2.set_ylabel("Fisher (scaled 0–1)")
+    # ax2.set_ylim(0, 1)
 
     # readable legend (opaque enough)
-    lines  = [l_acc, l_f1, l_auc, l_rsa, l_fis]
+    lines  = [l_acc, l_f1, l_auc, l_rsa] #l_fis]
     labels = [ln.get_label() for ln in lines]
     leg = ax.legend(lines, labels, loc=legend_loc, ncol=2, frameon=True,
                     fancybox=True, framealpha=0.92)
