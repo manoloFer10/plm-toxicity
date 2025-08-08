@@ -127,32 +127,36 @@ def save_class_signal_plot(
     out_path:   Union[str, Path] = "class_signal_layers.png",
     dpi: int = 300,
     show: bool = False,
+    *,
+    left_ylim: tuple[float, float] | None = (0, 1),   # None → auto
+    fisher_scale: str = "robust",                     # "robust" | "minmax"
+    fisher_clip: tuple[int,int] = (2, 98),            # used when robust
+    legend_loc: str = "upper left",
 ) -> Path:
     """
-    Plot class-signal metrics across layers and save to disk.
-
-    Parameters
-    ----------
-    acc, auc, fisher, rsa_scores : 1-D sequences of equal length
-        Metric values per model layer.
-    out_path : str or Path, default "class_signal_layers.png"
-        Where to write the image (extension determines format).
-    dpi : int, default 200
-        Resolution of the saved image.
-    show : bool, default False
-        If True, also display the figure in the current notebook cell.
-
-    Returns
-    -------
-    Path
-        Absolute path to the saved image.
+    Left axis: ACC, F1, AUC, RSA (0–1 or -1–1).
+    Right axis: Fisher scaled to [0,1] (robust or min-max).
     """
     out_path = Path(out_path).expanduser().resolve()
-    
-    fig, ax = plt.subplots(figsize=(7.2, 4.2))
-    left_ylim = (0, 1)
+    Ls = [len(acc), len(auc), len(f1), len(fisher), len(rsa_scores)]
+    if len(set(Ls)) != 1:
+        raise ValueError(f"All metric sequences must have equal length, got {Ls}")
 
-    # Left axis (primary)
+    fisher = np.asarray(fisher, float)
+    # --- scale Fisher to [0,1] ---
+    if fisher_scale == "robust":
+        lo, hi = np.nanpercentile(fisher, list(fisher_clip))
+    elif fisher_scale == "minmax":
+        lo, hi = np.nanmin(fisher), np.nanmax(fisher)
+    else:
+        raise ValueError("fisher_scale must be 'robust' or 'minmax'")
+    if not np.isfinite(lo) or not np.isfinite(hi) or hi <= lo:
+        lo, hi = np.nanmin(fisher), np.nanmax(fisher)  # fallback
+    fisher_scaled = np.clip((fisher - lo) / (hi - lo + 1e-12), 0, 1)
+
+    # --- plot ---
+    fig, ax = plt.subplots(figsize=(7.2, 4.2))
+
     l_acc, = ax.plot(acc,        label="Accuracy")
     l_f1,  = ax.plot(f1,         label="F1")
     l_auc, = ax.plot(auc,        label="ROC-AUC")
@@ -161,24 +165,28 @@ def save_class_signal_plot(
     ax.set_xlabel("Layer")
     ax.set_ylabel("Score")
     ax.set_title("Class signal across layers")
-
+    if left_ylim is not None:
+        ax.set_ylim(*left_ylim)
     ax.grid(True, alpha=0.25)
 
-    # Right axis (Fisher raw)
+    # right axis for Fisher (scaled 0–1)
     ax2 = ax.twinx()
-    l_fis, = ax2.plot(fisher, label="Fisher (raw)", linestyle="--", linewidth=1.5, color="black")
-    ax2.set_ylabel("Fisher ratio (raw)")
-    
-    p99 = float(np.nanpercentile(fisher, 99)) if np.isfinite(np.nanmax(fisher)) else 1.0
-    ax2.set_ylim(0, max(1e-12, p99 * 1.05))
+    l_fis, = ax2.plot(
+        fisher_scaled, linestyle="--", linewidth=1.8, color="black",
+        label=f"Fisher (scaled, {fisher_scale})"
+    )
+    ax2.set_ylabel("Fisher (scaled 0–1)")
+    ax2.set_ylim(0, 1)
 
-    # One combined legend
-    lines = [l_acc, l_f1, l_auc, l_rsa, l_fis]
+    # readable legend (opaque enough)
+    lines  = [l_acc, l_f1, l_auc, l_rsa, l_fis]
     labels = [ln.get_label() for ln in lines]
-    ax.legend(lines, labels, loc="upper left", frameon=False, ncol=2)
+    leg = ax.legend(lines, labels, loc=legend_loc, ncol=2, frameon=True,
+                    fancybox=True, framealpha=0.92)
+    leg.get_frame().set_facecolor("white")
+    leg.get_frame().set_edgecolor("0.6")
 
     fig.tight_layout()
-
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_path, dpi=dpi)
     if show:
