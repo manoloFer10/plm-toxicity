@@ -122,14 +122,16 @@ def main():
 
     # Benchmark logreg on taxa and retrieve 
     regressors = {}
+    unprocessed={}
     for taxa, dfs in tqdm(filtered_by_taxa.items(), total = len(filtered_by_taxa), desc = 'Probing taxa'):
-        if len(dfs[0])==0 or len(dfs[1])==0 :
-            print(f'Some dataframes had no samples: Tox={len(dfs[0])}, NonTox={len(dfs[1])}.') 
+        if len(dfs[0])<2 or len(dfs[1])<2 :
+            unprocessed[taxa]= dfs
             continue
         benchmark_data(dfs, model, tokenizer, taxa, rank)
         #clfs = benchmark_data(dfs, model, tokenizer, taxa)
         #regressors[taxa] = clfs
 
+    print(f'Some dataframes had no samples: \n {unprocessed=}.') 
     # # Benchmark logreg 1-1
     # for taxa, regressor in regressors.items():
     #     benchmark_all(regressor, taxa, filtered_by_taxa)
