@@ -33,7 +33,7 @@ def main():
     rank = 'species'
     identity = 0.9
 
-    tox, non_tox = get_splits(UNIPROT_CURATED, rank)
+    tox, non_tox = get_splits(UNIPROT_CURATED)
 
     #Filter by taxa present in toxic proteins
     tox_rank, non_tox_rank = filter_by_top_taxa(tox, non_tox,
