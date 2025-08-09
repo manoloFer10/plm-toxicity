@@ -466,6 +466,7 @@ def explore_dataset(
     organism_col: str      = "Organism",
     palette: str           = "viridis",
 ):
+    
     # LENGTH HISTOGRAM 
     fig, ax = plt.subplots(figsize=(6, 4))
     sns.histplot(np.log10(df[length_col]), kde=True,
@@ -524,6 +525,11 @@ def filter_by_top_taxa(df_a, df_b,
     If match_counts=True, subset_b is down-sampled per taxon to the same size
     as in subset_a (useful for balanced comparisons).
     """
+
+    if n_top == 'all':
+        n_top = len(df_a[rank].unique())
+    else:
+        n_top= int(n_top)
 
     # 1) add rank column to both dataframes
     df_a = df_a.copy()
