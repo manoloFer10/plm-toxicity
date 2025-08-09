@@ -135,7 +135,7 @@ def map_sequences_to_cdhit_clusters(
             cmd += ["-i", str(r_fa), "-i2", str(q_fa)]
         else:
             cmd += ["-i", str(q_fa)]
-        lens = df[seq_col].astype(str).str.len().tolist()
+        lens = df['Length'].tolist()
         c, n, aS, aL, min_len = _choose_cdhit_params(identity, lens)
 
         cmd += [
