@@ -42,7 +42,7 @@ def main():
                        lineage_col="Taxonomic lineage",
                        match_counts=False, #keep all proteins! clustering will trim most.
                        random_state=42)
-    print(f'Filtered by top taxa in toxic set: {len(tox_rank[rank].unique())}')
+    print(f'Filtered by top taxa in toxic set: {len(tox_rank[rank].unique())} unique taxa.')
     
     #Cluster
     tox_clustered_by_taxa = get_representatives_within_taxa(tox_rank, rank, identity=identity)
