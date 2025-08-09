@@ -83,12 +83,12 @@ def benchmark_data(acts_tox, acts_non_tox, taxa, taxonomy, is_full=False):
 
 
 
-def get_datasets():
+def get_datasets(data_path):
     def add_eos(example):
         example['Sequence'] =  '<|endoftext|>' + example['Sequence'] + '<|endoftext|>'
         return example
     
-    data=load_dataset('manufernandezbur/uniref50')['train']
+    data=load_dataset(data_path)['train']
     
     tox = data.filter(lambda example: example['Toxin'] and example['Length']<1000)
     non_tox = data.filter(lambda example: not example['Toxin'] and example['Length']<1000)
@@ -102,22 +102,17 @@ def get_datasets():
 def main():
     model, tokenizer = get_protgpt2()
 
-    tox, non_tox = get_datasets()
-    
-    rank = "species"
+    repo = ...
+    rank = 'species'
 
-    tox_fam, non_tox_fam = filter_by_top_taxa(
-        tox, non_tox,
-        rank=rank,
-        n_top=15,
-        lineage_col="Taxonomic lineage",
-        match_counts=True     # False if you just want to keep *all* matches
-    )
+    data_path = repo + '_' + rank 
 
-    top_taxa = tox_fam[rank].unique()
+    tox, non_tox = get_datasets(data_path) #already curated and filtered dataset
+
+    top_taxa = tox[rank].unique()
 
     filtered_by_taxa = {
-        taxa: (tox_fam[tox_fam[rank] == taxa], non_tox_fam[non_tox_fam[rank] == taxa]) 
+        taxa: (tox[tox[rank] == taxa], non_tox[non_tox[rank] == taxa]) 
         for taxa in top_taxa
     }
 
@@ -151,7 +146,7 @@ def main():
     all_nontox_acts= torch.cat(all_nontox_acts, dim=0)
     benchmark_data(all_tox_acts, all_nontox_acts,'All', rank, is_full=True)
 
-    print(f'Processed {len(tox_fam)-unprocessed_tox} toxic samples and {len(non_tox_fam)-unprocessed_non_tox} non-toxic samples.') 
+    print(f'Processed {len(tox)-unprocessed_tox} toxic samples and {len(non_tox)-unprocessed_non_tox} non-toxic samples.') 
     # Benchmark logreg 1-1
     # for taxa, regressor in regressors.items():
     #     benchmark_all(regressor, taxa, filtered_by_taxa)
