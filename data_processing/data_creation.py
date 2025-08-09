@@ -12,7 +12,7 @@ def add_eos(example):
 def get_splits(data):
         
     tox = data.filter(lambda example: example['Toxin'] and example['Length']<1000)
-    non_tox = data.filter(lambda example: not example['Toxin'] and example['Length']<1000)
+    non_tox = data.filter(lambda example: not example['Toxin'] and 4<example['Length']<1000)
     
     return tox.to_pandas(), non_tox.to_pandas()
 
@@ -22,7 +22,6 @@ def get_representatives_within_taxa(ranked_df, rank, identity):
     dfs= []
     for taxa in taxas:
         filtered = ranked_df[ranked_df[rank]==taxa]
-        if  4 <= filtered['Length'].min() < 10: identity=0.6
         df = map_sequences_to_cdhit_clusters(filtered, identity=identity)
         df = pick_cluster_representatives_from_df(df)
         dfs.append(df)

@@ -10,7 +10,25 @@ def _pick_word_size(identity: float) -> int:
     if identity >= 0.7: return 5
     if identity >= 0.6: return 4
     if identity >= 0.5: return 3
-    return 2  # very low identities; slower
+    return 2  
+
+def _choose_cdhit_params(identity, seq_lengths):
+    Lmin = int(min(seq_lengths))
+    c = identity
+    n = 5 if identity >= 0.7 else 4 if identity >= 0.6 else 3 if identity >= 0.5 else 2
+    aS = aL = 0.8
+    min_len = 10
+
+    if Lmin < 10:
+        min_len = 2               # keep sub-10aa peptides
+        aS = aL = 1.0             # require full overlap for tiny peptides
+        if Lmin < 5:
+            c = 1.0               # only merge identical 2–4 aa peptides
+            n = 2                 # 2-mers are the only viable seeds here
+        else:
+            n = min(n, Lmin)      # ensure word size <= shortest seq
+
+    return c, n, aS, aL, min_len
 
 def _wrap_fasta(seq: str, width: int = 60) -> str:
     s = re.sub(r"\s+", "", str(seq or "")).upper()
@@ -117,15 +135,19 @@ def map_sequences_to_cdhit_clusters(
             cmd += ["-i", str(r_fa), "-i2", str(q_fa)]
         else:
             cmd += ["-i", str(q_fa)]
+        lens = df[seq_col].astype(str).str.len().tolist()
+        c, n, aS, aL, min_len = _choose_cdhit_params(identity, lens)
+
         cmd += [
             "-o", str(out_prefix),
-            "-c", str(identity),
+            "-c", str(c),
             "-n", str(n),
             "-T", str(threads),
-            "-M", "0",             # no memory cap
-            "-g", "1",             # slow/accurate mode for clustering
-            "-aS", str(coverage_short),
-            "-aL", str(coverage_long),
+            "-M", "0",
+            "-g", "1",
+            "-aS", str(aS),
+            "-aL", str(aL),
+            "-l", str(min_len),
         ]
 
         subprocess.run(cmd, check=True)
