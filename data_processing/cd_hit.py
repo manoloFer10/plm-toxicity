@@ -20,7 +20,7 @@ def _choose_cdhit_params(identity, seq_lengths):
     min_len = 10
 
     if Lmin < 10:
-        min_len = 2               # keep sub-10aa peptides
+        min_len = 3               # keep sub-10aa peptides
         aS = aL = 1.0             # require full overlap for tiny peptides
         if Lmin < 5:
             c = 1.0               # only merge identical 2–4 aa peptides
