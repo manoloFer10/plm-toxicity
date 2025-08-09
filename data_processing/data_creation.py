@@ -11,8 +11,8 @@ def add_eos(example):
 
 def get_splits(data):
         
-    tox = data.filter(lambda example: example['Toxin'] and example['Length']<1000)
-    non_tox = data.filter(lambda example: not example['Toxin'] and 4<example['Length']<1000)
+    tox = data.filter(lambda example: example['Toxin'] and 10<example['Length']<1000)
+    non_tox = data.filter(lambda example: not example['Toxin'] and 10<example['Length']<1000)
     
     return tox.to_pandas(), non_tox.to_pandas()
 
