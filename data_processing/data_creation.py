@@ -54,3 +54,5 @@ def main():
     tox_clustered_by_taxa.to_csv('clustered_toxins.csv', index=False)
     non_tox_clustered_by_taxa.to_csv('clustered_non_toxins.csv', index = False)
     
+if __name__ =='__main__':
+    main()
