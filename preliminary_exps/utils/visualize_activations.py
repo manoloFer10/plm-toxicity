@@ -526,16 +526,16 @@ def filter_by_top_taxa(df_a, df_b,
     as in subset_a (useful for balanced comparisons).
     """
 
-    if n_top == 'all':
-        n_top = len(df_a[rank].unique())
-    else:
-        n_top= int(n_top)
-
     # 1) add rank column to both dataframes
     df_a = df_a.copy()
     df_b = df_b.copy()
     df_a[rank] = df_a[lineage_col].apply(get_rank, wanted=rank)
     df_b[rank] = df_b[lineage_col].apply(get_rank, wanted=rank)
+
+    if n_top == 'all':
+        n_top = len(df_a[rank].unique())
+    else:
+        n_top= int(n_top)
 
     # 2) identify top-N taxa in df_a
     top_taxa = (
