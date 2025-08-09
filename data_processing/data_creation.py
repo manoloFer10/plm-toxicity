@@ -22,6 +22,7 @@ def get_representatives_within_taxa(ranked_df, rank, identity):
     dfs= []
     for taxa in taxas:
         filtered = ranked_df[ranked_df[rank]==taxa]
+        if  4 <= filtered['Length'].min() < 10: identity=0.6
         df = map_sequences_to_cdhit_clusters(filtered, identity=identity)
         df = pick_cluster_representatives_from_df(df)
         dfs.append(df)
@@ -54,5 +55,5 @@ def main():
     tox_clustered_by_taxa.to_csv('clustered_toxins.csv', index=False)
     non_tox_clustered_by_taxa.to_csv('clustered_non_toxins.csv', index = False)
     
-if __name__ =='__main__':
+if __name__ == '__main__':
     main()
