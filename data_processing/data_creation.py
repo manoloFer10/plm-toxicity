@@ -17,7 +17,7 @@ def get_splits(data):
     return tox.to_pandas(), non_tox.to_pandas()
 
 def get_representatives_within_taxa(ranked_df, rank, identity):
-    taxas = ranked_df[rank].unique().to_list()
+    taxas = list(ranked_df[rank].unique())
 
     dfs= []
     for taxa in taxas:
