@@ -118,15 +118,15 @@ def main():
     unprocessed={}
     all_tox_acts, all_nontox_acts = [], []
     for taxa, dfs in tqdm(filtered_by_taxa.items(), total = len(filtered_by_taxa), desc = 'Probing taxa'):
+        #Extract activations
+        acts_tox, acts_non_tox = get_acts(dfs, model, tokenizer)
+        all_tox_acts.append(acts_tox)
+        all_nontox_acts.append(acts_non_tox)
+        
         if len(dfs[0])<2 or len(dfs[1])<2 :
             unprocessed[taxa]= dfs
             continue
         else:
-            #Extract activations
-            acts_tox, acts_non_tox = get_acts(dfs, model, tokenizer)
-            all_tox_acts.append(acts_tox)
-            all_nontox_acts.append(acts_non_tox)
-
             benchmark_data(acts_tox, acts_non_tox, taxa, rank)
 
 
