@@ -123,7 +123,7 @@ def main():
         all_tox_acts.append(acts_tox)
         all_nontox_acts.append(acts_non_tox)
         
-        if len(dfs[0])<2 or len(dfs[1])<2 :
+        if len(dfs[0])<10 or len(dfs[1])<10 :
             unprocessed[taxa]= dfs
             continue
         else:
