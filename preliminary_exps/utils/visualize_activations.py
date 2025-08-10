@@ -564,6 +564,22 @@ def filter_by_top_taxa(df_a, df_b,
     return sub_a, sub_b
 
 
+def balance_datasets(tox_fam, nontox_fam, rank, percent = 0.7):
+    balanced_tox, balanced_nontox = [], []
+    ranks = tox_fam[rank].unique()
+    for rank_ in ranks:
+        sub_tox = tox_fam[tox_fam[rank]== rank_]
+        sub_nontox = nontox_fam[nontox_fam[rank] == rank_]
+        difference = abs(len(sub_tox)-len(sub_nontox))
+        balance = 1 - difference/max([len(sub_tox), len(sub_nontox)])
+
+        if balance > percent:
+            balanced_tox.append(sub_tox)
+            balanced_nontox.append(sub_nontox)
+
+    return pd.concat(balanced_tox, ignore_index=True), pd.concat(balanced_nontox)
+
+
 def compare_family_bars(sub_a, sub_b, rank="family", palette="Set2"):
     """
     Quick bar-plot of family counts (after filtering) for each dataset.

@@ -1,7 +1,7 @@
 from preliminary_exps.utils.extract_activations import get_activations_for_datasets
-from preliminary_exps.utils.probing import layerwise_linear_probe, layerwise_rsa, fisher_ratio
+from preliminary_exps.utils.probing import layerwise_linear_probe, layerwise_rsa
 from utils.models import get_protgpt2
-from preliminary_exps.utils.visualize_activations import filter_by_top_taxa, save_class_signal_plot
+from preliminary_exps.utils.visualize_activations import save_class_signal_plot
 from datasets import load_dataset
 from tqdm import tqdm
 import torch
@@ -102,12 +102,10 @@ def get_datasets(data_path):
 def main():
     model, tokenizer = get_protgpt2()
 
-    repo = ...
+    repo = 'manufernandezbur/balanced_toxfeatures' #already curated and filtered dataset
     rank = 'species'
 
-    data_path = repo + '_' + rank 
-
-    tox, non_tox = get_datasets(data_path) #already curated and filtered dataset
+    tox, non_tox = get_datasets(repo) 
 
     top_taxa = tox[rank].unique()
 

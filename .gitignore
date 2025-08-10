@@ -5,3 +5,4 @@ local_images
 *.obo
 data
 __pycache__
+old_no_cluster/
