@@ -12,6 +12,9 @@ rm $MINI
 echo "✅  Conda installed."
 
 # ── 2. make conda available in this shell
+if ! grep -q 'miniconda3/etc/profile.d/conda.sh' ~/.bashrc; then
+  echo '. "$HOME/miniconda3/etc/profile.d/conda.sh"' >> ~/.bashrc
+fi
 source "$HOME/miniconda3/etc/profile.d/conda.sh"
 
 # ── 3. auto-accept Anaconda Terms of Service **once**
@@ -28,5 +31,4 @@ pip install -r requirements.txt
 
 echo "🎉  Environment ready, dowloading final pkgs..."
 
-apt update
-apt install tmux
+apt update && apt install -y tmux
