@@ -123,6 +123,6 @@ def generate_directions(model, tokenizer, block_modules, tox_seqs, non_tox_seqs,
 
     assert not mean_diffs.isnan().any()
 
-    torch.save(mean_diffs, f"{artifact_dir}/mean_diffs.pt")
+    torch.save(mean_diffs, f"{artifact_dir}/preliminary_exps/mean_diffs.pt")
 
     return mean_diffs
