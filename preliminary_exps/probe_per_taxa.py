@@ -1,7 +1,7 @@
-from preliminary_exps.utils.extract_activations import get_activations_for_datasets
-from preliminary_exps.utils.probing import layerwise_linear_probe, layerwise_rsa
+from utils.extract_activations import get_activations_for_datasets
+from utils.probing import layerwise_linear_probe, layerwise_rsa
 from utils.models import get_protgpt2
-from preliminary_exps.utils.visualize_activations import save_class_signal_plot
+from utils.visualize_activations import save_class_signal_plot
 from datasets import load_dataset
 from tqdm import tqdm
 import torch
@@ -139,12 +139,13 @@ def main():
     print(f'Some dataframes had no samples: \n {_print_unprocessed(unprocessed)}.')
     unprocessed_non_tox = sum([len(v[1]) for k,v in unprocessed.items()])
     unprocessed_tox = sum([len(v[0]) for k,v in unprocessed.items()])
+    print(f'Processed {len(tox)-unprocessed_tox} toxic samples and {len(non_tox)-unprocessed_non_tox} non-toxic samples.') 
 
+    # Benchmark all activations
     all_tox_acts= torch.cat(all_tox_acts,dim=0)
     all_nontox_acts= torch.cat(all_nontox_acts, dim=0)
     benchmark_data(all_tox_acts, all_nontox_acts,'All', rank, is_full=True)
 
-    print(f'Processed {len(tox)-unprocessed_tox} toxic samples and {len(non_tox)-unprocessed_non_tox} non-toxic samples.') 
     # Benchmark logreg 1-1
     # for taxa, regressor in regressors.items():
     #     benchmark_all(regressor, taxa, filtered_by_taxa)
