@@ -1,6 +1,6 @@
 from utils.extract_activations import get_activations_for_datasets
 from utils.probing import layerwise_linear_probe, layerwise_rsa
-from utils.models import get_protgpt2
+from utils.models.gPLM import get_protgpt2
 from utils.visualize_activations import save_class_signal_plot
 from datasets import load_dataset
 from tqdm import tqdm

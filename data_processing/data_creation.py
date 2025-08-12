@@ -1,6 +1,6 @@
 import pandas as pd
 from datasets import load_dataset
-from preliminary_exps.utils.visualize_activations import filter_by_top_taxa, get_rank
+from utils.visualize_activations import filter_by_top_taxa, get_rank
 from data_processing.cd_hit import map_sequences_to_cdhit_clusters, pick_cluster_representatives_from_df
 
 UNIPROT_CURATED = load_dataset('manufernandezbur/uniprot2025_03')['train']
