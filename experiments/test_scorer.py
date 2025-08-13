@@ -10,10 +10,15 @@ from tqdm import tqdm
 def get_dataset(path):
     data = load_dataset(path)['train']
 
-    data = data.filter(lambda example: example['Length']>50) # get all samples higher than the model capability
+    data = data.filter(lambda example: 200>example['Length']>50) # get all samples higher than the model capability
 
-    tox = data.filter(lambda example: example['Toxin']).to_pandas().sample(n=50, random_state=42)
-    non_tox = data.filter(lambda example: not example['Toxin']).to_pandas().sample(n=50, random_state=42)
+    tox = data.filter(lambda example: example['Toxin']).to_pandas()
+    non_tox = data.filter(lambda example: not example['Toxin']).to_pandas()
+
+    n_sample = min(25, min(len(tox), len(non_tox)))
+
+    tox = tox.sample(n=n_sample, random_state=42)
+    non_tox = non_tox.sample(n=n_sample, random_state=42)
 
     print('Loaded data successfully')
 
