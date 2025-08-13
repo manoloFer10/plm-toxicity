@@ -143,7 +143,7 @@ class ToxDL2Scorer():
     def _load_domain2vector(self, path: Path | None):
         try:
             if path is None:
-                path = Path("utils/toxic_scorers/checkpoints/domain2vec.model")
+                path = Path("utils/toxic_scorers/checkpoints/protein_domain_embeddings.model")
             return load_domain2vector(path)
         except Exception as e:
             raise ModuleNotFoundError(f"Could not load domain2vector: {e} — using zero vector fallback.")
