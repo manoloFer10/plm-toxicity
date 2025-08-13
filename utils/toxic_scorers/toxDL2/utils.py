@@ -181,3 +181,81 @@ def get_af2_structure(
             return hits[0], _mean_plddt_from_pdb(hits[0])
 
     raise FileNotFoundError("No PDB file found in AF2 output.")
+
+def get_af2_structure_single(
+    sequence: str,
+    cache_root: Path = Path("~/.cache/toxdl2_af2").expanduser(),
+    msa_mode: str = "single_sequence",
+    num_recycles: int = 0,              # lean
+    model_type: str | None = "alphafold2_ptm",
+    num_models: int = 1,                # lean
+    num_seeds: int = 1,                 # lean
+    skip_relax: bool = True,
+    verbosity: str = "warn"
+) -> Tuple[Path, List[float]]:
+    """
+    Run ColabFold once for the FULL sequence and return:
+      (best_pdb_path, per_residue_plddt_list)
+    """
+    from utils.toxic_scorers.toxDL2.utils import _write_fasta  # reuse your writer
+
+    key = _sha16(sequence)
+    out_dir = cache_root / key
+    out_dir.mkdir(parents=True, exist_ok=True)
+    fasta_path = out_dir / "query.fasta"
+    _write_fasta(sequence, fasta_path)
+
+    # already computed?
+    best_candidates = [
+        "*rank_001*.pdb", "*best*.pdb", "*.pdb"
+    ]
+    for pat in best_candidates:
+        hits = sorted(out_dir.glob(pat))
+        if hits:
+            return hits[0], _plddt_per_residue(hits[0])
+
+    colabfold_bin = os.environ.get("TOXDL2_COLABFOLD_BIN", "colabfold_batch")
+    cmd = [
+        colabfold_bin,
+        "--msa-mode", msa_mode,
+        "--num-recycle", str(num_recycles),
+        "--num-models", str(num_models),
+        "--num-seeds", str(num_seeds),
+        # rank by pLDDT by default
+    ]
+    if not skip_relax:
+        cmd.append("--amber")
+    if model_type:
+        cmd += ["--model-type", model_type]
+    cmd += [str(fasta_path), str(out_dir)]
+
+    env = os.environ.copy()
+    env.setdefault("TF_CPP_MIN_LOG_LEVEL", "2" if verbosity in {"warn","silent"} else "1")
+    env.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
+    env.setdefault("XLA_PYTHON_CLIENT_MEM_FRACTION", "0.85")
+
+    log_path = out_dir / "colabfold.log"
+    stdout = open(log_path, "w")
+    try:
+        subprocess.run(cmd, check=True, env=env, stdout=stdout, stderr=subprocess.STDOUT, text=True)
+    finally:
+        stdout.close()
+
+    for pat in best_candidates:
+        hits = sorted(out_dir.glob(pat))
+        if hits:
+            return hits[0], _plddt_per_residue(hits[0])
+
+    raise RuntimeError(f"AF2 produced no PDB in {out_dir}")
+
+def _plddt_per_residue(pdb_path: Path) -> list[float]:
+    """Read per-residue pLDDT from B-factor column of CA atoms."""
+    p = []
+    with open(pdb_path) as fh:
+        for line in fh:
+            if line.startswith("ATOM") and line[12:16].strip() == "CA":
+                try:
+                    p.append(float(line[60:66]))
+                except ValueError:
+                    p.append(float("nan"))
+    return p
