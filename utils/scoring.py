@@ -98,51 +98,98 @@ class ToxDL2Scorer():
     #     except Exception as e:
     #         raise FileNotFoundError(f"pfam_domains failed: {e}; continuing with empty domain set")
     
-    def score(self, seq: str):
+    def _get_combination_fn(self, setting: str):
+        """
+        Returns a function that takes:
+            (windows, probs, window_plddts, filtered_idx)
+        and returns:
+            tox_p, chosen_idx, reported_plddt
+        """
+        setting = (setting or "max_window").lower()
+
+        def max_window(windows, probs, w_plddts, idxs):
+            # choose the single best window by prob
+            if idxs.size == 0:
+                # shouldn't happen (caller ensures non-empty)
+                idxs = np.arange(len(windows))
+            local = probs[idxs]
+            best_local = int(np.argmax(local))
+            chosen_idx = int(idxs[best_local])
+            tox_p = float(probs[chosen_idx])
+            reported_plddt = float(w_plddts[chosen_idx])
+            return tox_p, chosen_idx, reported_plddt
+
+        def avg_window(windows, probs, w_plddts, idxs):
+            # average probability over passing windows; still report the argmax window for reference
+            if idxs.size == 0:
+                idxs = np.arange(len(windows))
+            sel_probs = probs[idxs]
+            tox_p = float(sel_probs.mean())
+            # which window is “most toxic” among the ones used
+            chosen_idx = int(idxs[int(np.argmax(sel_probs))])
+            # report the mean pLDDT across used windows
+            reported_plddt = float(np.nanmean(w_plddts[idxs]))
+            return tox_p, chosen_idx, reported_plddt
+
+        mapping = {
+            "max_window": max_window,
+            "avg_window": avg_window,
+        }
+        return mapping.get(setting, max_window)
+
+
+    def score(self, seq: str, setting: str = "max_window"):
         windows = [(0, len(seq))] if len(seq) <= WIN else [
             (i, min(i + WIN, len(seq))) for i in range(0, len(seq) - WIN + 1, STRIDE)
         ]
         if len(seq) > WIN and windows[-1][1] < len(seq):
             windows.append((len(seq) - WIN, len(seq)))
 
-        # ---- one-pass prep
+        # ---- one-pass prep (AF2+ESM+PFAM once)
         seq, coords, plddt_per_res, token_reps, dom_vec = self._prepare(seq)
 
-        # per-window pLDDT
-        def mean_plddt(s,e): 
-            import numpy as np
-            return float(np.nanmean(plddt_per_res[s:e])) if e>s else float("nan")
+        # per-window mean pLDDT
+        def window_plddt(s, e):
+            return float(np.nanmean(plddt_per_res[s:e])) if e > s else float("nan")
 
-        # Build graphs (no AF2/ESM/PFAM work here)
+        # Build graphs (cheap; no recompute of AF2/ESM/PFAM here)
         graphs = self._make_window_graphs(coords, token_reps, dom_vec, windows)
 
-        # Batch to GPU/CPU
-        loader = DataLoader(graphs, batch_size=len(graphs), shuffle=False)
+        # Batch inference (robust to future changes in batch size)
+        probs_chunks = []
+        self.model.eval()
         with torch.no_grad():
+            loader = DataLoader(graphs, batch_size=len(graphs), shuffle=False)
             for batch in loader:
-                # DataLoader creates .batch vector automatically
-                batch = batch.to(self.device)
-                probs = self.model(batch).view(-1).float().cpu().numpy()  # model ends with Sigmoid
+                batch = batch.to(self.device)                  # .batch vector is auto-added
+                out = self.model(batch)                        # [B] or [B,1] with Sigmoid
+                probs_chunks.append(out.view(-1).detach().cpu())
+        probs = torch.cat(probs_chunks).numpy()
+        assert len(probs) == len(windows)
 
-        # Gate by pLDDT; then pick best tox prob
-        best_idx, best_plddt = None, float("nan")
-        for i,(s,e) in enumerate(windows):
-            p = mean_plddt(s,e)
-            if p >= PLDDT_MIN:
-                if best_idx is None or probs[i] > probs[best_idx]:
-                    best_idx, best_plddt = i, p
+        # Filter by pLDDT gate
+        window_plddts = np.array([window_plddt(s, e) for (s, e) in windows], dtype=float)
+        passing = np.where(window_plddts >= PLDDT_MIN)[0]
 
-        if best_idx is None:
-            # fall back: ignore pLDDT gate
-            best_idx = int(np.nanargmax(probs))
-            best_plddt = mean_plddt(*windows[best_idx])
+        # Choose combiner
+        combine_fn = self._get_combination_fn(setting)
 
-        tox_p = float(probs[best_idx])
+        # If nothing passes, fall back to “use all”
+        if passing.size == 0:
+            passing = np.arange(len(windows))
+
+        tox_p, chosen_idx, reported_plddt = combine_fn(
+            windows=windows,
+            probs=probs,
+            w_plddts=window_plddts,
+            idxs=passing,
+        )
+
         return {
-            "tox_prob": tox_p,
+            "tox_prob": float(tox_p),
             "non_tox_prob": float(1.0 - tox_p),
-            "best_window": windows[best_idx],
-            "mean_plddt": best_plddt,
+            "best_window": windows[int(chosen_idx)],
+            "mean_plddt": float(reported_plddt),
         }
     
     # scoring for a <=50 aa sequence

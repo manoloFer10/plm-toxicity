@@ -24,11 +24,11 @@ def get_dataset(path, n_samples):
 
     return pd.concat([tox, non_tox])
 
-def eval_sliding(dataset, out_path: Path, plddt_gate: float = 70.0):
+def eval_sliding(dataset, out_path: Path, plddt_gate: float = 70.0, setting = 'max_window'):
     scorer = ToxDL2Scorer(af2_verbosity="silent")
     preds, gts, out_rows = [], [], []
     for _, ex in tqdm(dataset.iterrows(), total= len(dataset), desc='Testing Scorer'):
-        res = scorer.score(ex["Sequence"])  # dict: tox_prob, non_tox_prob, best_window, mean_plddt
+        res = scorer.score(ex["Sequence"], setting=setting)  # dict: tox_prob, non_tox_prob, best_window, mean_plddt
         tox_p = res["tox_prob"]
         non_tox_p = res["non_tox_prob"]
         plddt = res["mean_plddt"]
@@ -79,9 +79,15 @@ if __name__ == "__main__":
     ap.add_argument("--out", required=True, help="Ruta CSV de salida")
     ap.add_argument("--plddt_gate", type=float, default=70.0)
     ap.add_argument("--n_samples", default=50, type=int)
+    ap.add_argument("--setting", default= 'max_window')
     args = ap.parse_args()
 
     dataset = get_dataset(args.data_path, args.n_samples)
     if len(dataset)==0:
-        raise SystemExit("No hay secuencias >50 aa en el CSV.")
-    eval_sliding(dataset, Path(args.out), plddt_gate=args.plddt_gate)
+        raise SystemExit("Empty dataset")
+    
+    out= args.setting + '_' + args.out
+    eval_sliding(dataset, 
+                 Path(out), 
+                 plddt_gate = args.plddt_gate, 
+                 setting = args.setting)
