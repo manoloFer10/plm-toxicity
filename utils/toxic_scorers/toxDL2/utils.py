@@ -116,7 +116,7 @@ def get_af2_structure(
         "--num-recycle", str(num_recycles),
     ]
     if skip_relax:
-        cmd += ["--amber", "false"]
+        cmd += ["--amber"]
     if model_type:
         cmd += ["--model", model_type]
 
