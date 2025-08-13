@@ -6,3 +6,4 @@ local_images
 data
 __pycache__
 old_no_cluster/
+prob_min10/
