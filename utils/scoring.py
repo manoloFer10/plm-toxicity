@@ -87,11 +87,11 @@ class ToxDL2Scorer():
         return best
     
     # scoring for a <=50 aa sequence
-    def _score(self, sequence):
+    def _score_window(self, sequence):
 
         assert len(sequence)<50, 'Sequence length of sub string should be less than 50 for ToxDL2 to work.'
 
-        pdb_file = self.get_temp_pdb_structure(sequence)
+        pdb_file = self.get_temp_pdb_structures(sequence)
         protein_domains = self.get_protein_domains(sequence)
 
         protein_feature = self.obtain_protein_feature(pdb_file, protein_domains)
