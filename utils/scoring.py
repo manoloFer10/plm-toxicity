@@ -1,9 +1,10 @@
-import torch, math, warnings
+import torch, math, warnings, time
 import numpy as np
 from utils.toxic_scorers.toxDL2.model import load_ToxDL2_model, load_domain2vector, pdb_to_graph
 from utils.toxic_scorers.toxDL2.utils import pfam_domains, get_af2_structure
 from pathlib import Path
 from torch_geometric.data import Data
+
 
 # Los modelos de toxicidad sólo pueden ver 50 aa. OK -> agarremos todas las proteínas de longitud mayor a 50 aa y veamos si las catalogan bien.
 
@@ -17,11 +18,13 @@ class ToxDL2Scorer():
                  ckpt: Path = Path("utils/toxic_scorers/checkpoints/ToxDL2_state.pth"),
                  domain2vec_path: Path | None = None,
                  device: str | None = None):
-        
+        start_time = time.time()
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.model = self._load_model(ckpt)
         self.domain2vector = self._load_domain2vector(domain2vec_path)
-        
+        end_time = time.time()
+
+        print(f'ToxDL2 loaded in {end_time - start_time} seconds.')
 
     def get_temp_pdb_structures(self, sequence):
         """
