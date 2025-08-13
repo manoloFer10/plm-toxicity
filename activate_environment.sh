@@ -38,9 +38,6 @@ apt update && apt install -y tmux
 
 echo "Pfam + ColabFold..."
 
-# install bio tools 
-conda install -y -c conda-forge -c bioconda pfam_scan colabfold
-
 # prepare Pfam DB once
 mkdir -p ~/db/pfam && cd ~/db/pfam
 wget -q https://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/Pfam-A.hmm.gz
