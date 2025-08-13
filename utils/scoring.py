@@ -24,6 +24,10 @@ class ToxDL2Scorer():
         self.model = self._load_model(ckpt)
         self.domain2vector = self._load_domain2vector(domain2vec_path)
         self.af2_verbosity = af2_verbosity
+
+        cache_path = Path('cache/')
+        cache_path.mkdir(exist_ok=True)
+        self.cache_dir = cache_path
         end_time = time.time()
 
         print(f'ToxDL2 loaded in {end_time - start_time} seconds.')
@@ -33,7 +37,7 @@ class ToxDL2Scorer():
         Returns: (pdb_path: Path, mean_plddt: float) for the provided sequence.
         Uses cached AF2 (ColabFold) predictions under ~/.cache/toxdl2_af2/<sha16>/.
         """
-        pdb_path, plddt = get_af2_structure(sequence, verbosity=self.af2_verbosity)
+        pdb_path, plddt = get_af2_structure(sequence, out_dir=self.cache_dir, verbosity=self.af2_verbosity)
         return pdb_path, plddt
 
     
