@@ -157,7 +157,6 @@ def score_toxicity(sequences):
     '''
     Estimates the toxicity of a set of aa sequences by averaging the toxicity probabilities for each.
     '''
-    global TOXIC_SCORER
 
     results = [TOXIC_SCORER.score(seq) for seq in sequences]
     toxic_probs = torch.tensor([r["tox_prob"] for r in results], dtype=torch.float32)
