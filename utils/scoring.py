@@ -101,10 +101,9 @@ class ToxDL2Scorer():
         protein_feature = protein_feature.to(self.device)
 
         with torch.no_grad():
-            prediction = self.model.forward(protein_feature)
-            print(protein_feature.name + f"\tPrediction: {prediction.item()}")
+            tox_p = float(self.model(protein_feature).view(-1)[0].item())  
 
-        return prediction
+        return tox_p, 1.0 - tox_p, float(plddt)
     
     # ---- helpers
     def get_domain_vector(self, protein_domains):
@@ -134,6 +133,8 @@ class ToxDL2Scorer():
             vector=domain_vector,
             y=torch.tensor(float(y), dtype=torch.float),
         )
+        # single-graph batch needed by global_mean_pool
+        data_item.batch = torch.zeros(data_item.x.size(0), dtype=torch.long)
         return data_item
 
     # ----- load models
