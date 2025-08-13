@@ -52,9 +52,14 @@ class ToxDL_GCN_Network(torch.nn.Module):
     def forward(self, data):
         # compute the protein embeddings using the protein embedder on the protein data of the batch
         protein_emb = self.protein_GCN(data.x, data.edge_index, data.batch)
-        prot_domain = torch.Tensor(data.vector).to('cuda')
-        # concatenate both embeddings and return the output of the FNN
-        combined = torch.cat((protein_emb, prot_domain), dim=1)
+        prot_domain = torch.as_tensor(
+            data.vector,
+            device=protein_emb.device,
+            dtype=protein_emb.dtype,
+            )
+        prot_domain = prot_domain.reshape(protein_emb.size(0), -1)            # [B, D]
+
+        combined = torch.cat((protein_emb, prot_domain), dim=1)               # [B, G+D]
         return self.combine(combined)
     
 

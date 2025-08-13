@@ -57,20 +57,26 @@ class ToxDL2Scorer():
     def _domain_vector(self, domain_names):
         wv = self.domain2vector.wv
         arr = [wv[d] for d in domain_names if d in wv]
-        import numpy as np
         if arr:
-            return np.expand_dims(np.mean(arr, axis=0), axis=0)
-        return np.expand_dims(np.zeros(self.domain2vector.vector_size, dtype=np.float32), axis=0)
+            v = np.mean(np.stack(arr, axis=0), axis=0, dtype=np.float32)  # [256]
+        else:
+            v = np.zeros(self.domain2vector.vector_size, dtype=np.float32) # [256]
+        return v  # 1-D
 
     # ---- build graphs for all windows without recomputing AF2/ESM/PFAM
     def _make_window_graphs(self, coords, token_reps, dom_vec, windows):
         samples = []
+        dom_t = torch.from_numpy(dom_vec).float()      # [256]
         for (s, e) in windows:
-            x = token_reps[s:e]                              # [w, 1280]
-            edge_index = edges_from_coords(coords[s:e])      # [2, E]
-            data = Data(x=x, edge_index=edge_index,
-                        length=(e - s),
-                        vector=dom_vec, y=torch.tensor(-1.0))
+            x = token_reps[s:e]                        # [w, 1280] torch.Tensor
+            edge_index = edges_from_coords(coords[s:e])
+            data = Data(
+                x=x,
+                edge_index=edge_index,
+                length=(e - s),
+                vector=dom_t,                          # 1-D; PyG will stack to [B,256]
+                y=torch.tensor(-1.0),
+            )
             samples.append(data)
         return samples
 
