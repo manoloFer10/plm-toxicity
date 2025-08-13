@@ -14,7 +14,7 @@ PLDDT_MIN = 70.0   # confidence minimum for AF pLDDT
 
 class ToxDL2Scorer():
     def __init__(self,
-                 ckpt: Path = Path("utils/toxic_scorers/checkpoints/ToxDL2_model.pth"),
+                 ckpt: Path = Path("utils/toxic_scorers/checkpoints/ToxDL2_state.pth"),
                  domain2vec_path: Path | None = None,
                  device: str | None = None):
         
@@ -89,15 +89,15 @@ class ToxDL2Scorer():
     # scoring for a <=50 aa sequence
     def _score_window(self, sequence):
 
-        assert len(sequence)<50, 'Sequence length of sub string should be less than 50 for ToxDL2 to work.'
+        assert len(sequence)<=50, 'Sequence length of sub string should be less or equal to 50 for ToxDL2 to work.'
 
-        pdb_file = self.get_temp_pdb_structures(sequence)
-        protein_domains = self.get_protein_domains(sequence)
+        pdb_path, plddt = self.get_temp_pdb_structures(sequence)  # path, float
+        protein_domains  = self.get_protein_domains(sequence)
 
-        protein_feature = self.obtain_protein_feature(pdb_file, protein_domains)
+        protein_feature = self.obtain_protein_feature(pdb_path, protein_domains)
+        protein_feature = protein_feature.to(self.device)
 
         with torch.no_grad():
-            protein_feature = protein_feature.to(self.device)
             prediction = self.model.forward(protein_feature)
             print(protein_feature.name + f"\tPrediction: {prediction.item()}")
 

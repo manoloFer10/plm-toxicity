@@ -6,6 +6,8 @@ import esm
 from pathlib import Path
 from torch_geometric.nn import GCNConv, global_mean_pool
 from gensim.models import Word2Vec
+import sys, types, importlib
+
 
 
 class GCN(torch.nn.Module):
@@ -63,6 +65,15 @@ def load_ToxDL2_model(path, device=None):
       - full model object (pickle).
     Works with PyTorch 2.6+ where weights_only=True is default.
     """
+
+    try:
+        # Map the real module to the legacy name expected by the pickle
+        sys.modules.setdefault("model", importlib.import_module("utils.toxic_scorers.toxDL2.model"))
+    except Exception:
+        shim = types.ModuleType("model")
+        shim.ToxDL_GCN_Network = ToxDL_GCN_Network
+        sys.modules["model"] = shim
+
     device = torch.device(device or ("cuda" if torch.cuda.is_available() else "cpu"))
     ckpt_path = Path(path)
     model = ToxDL_GCN_Network().to(device)
