@@ -15,18 +15,20 @@ echo "✅  Conda installed."
 if ! grep -q 'miniconda3/etc/profile.d/conda.sh' ~/.bashrc; then
   echo '. "$HOME/miniconda3/etc/profile.d/conda.sh"' >> ~/.bashrc
 fi
+set +u
 source "$HOME/miniconda3/etc/profile.d/conda.sh"
+set -u
 
-# ── 3. auto-accept Anaconda Terms of Service **once**
+# accept ToS (ok with -u off or on now)
 conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
 conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
-# (or export CONDA_PLUGINS_AUTO_ACCEPT_TOS=yes to blanket-approve in CI
-#  per Anaconda’s blog post):contentReference[oaicite:4]{index=4}
 
-# ── 4. create the project env (run from repo root!)
+# create & activate env
 cd plm-toxicity
-conda env create -y -f environment.yml        # -y → no prompt
+conda env create -y -f environment.yml
+set +u
 conda activate plmTox
+set -u
 pip install -r requirements.txt
 
 echo "🎉  Environment ready, dowloading final pkgs..."
