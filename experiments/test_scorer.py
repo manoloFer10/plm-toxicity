@@ -76,6 +76,6 @@ if __name__ == "__main__":
     args = ap.parse_args()
 
     dataset = get_dataset(args.data_path)
-    if not dataset:
+    if dataset.empty():
         raise SystemExit("No hay secuencias >50 aa en el CSV.")
     eval_sliding(dataset, Path(args.out), plddt_gate=args.plddt_gate)
