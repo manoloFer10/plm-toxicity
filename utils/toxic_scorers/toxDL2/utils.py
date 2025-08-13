@@ -1,7 +1,7 @@
-import shutil, subprocess, tempfile
+import shutil, subprocess, tempfile, hashlib, os
 from pathlib import Path
 from typing import List
-import os
+from typing import Tuple
 
 DEFAULT_PFAM_DB = Path(os.environ.get("PFAM_DB_DIR", "~/db/pfam")).expanduser()
 
@@ -54,10 +54,6 @@ def pfam_domains(sequence: str, pfam_db_dir: Path | None = None) -> List[str]:
     
 
 
-import hashlib, json, os, subprocess, tempfile
-from pathlib import Path
-from typing import Tuple
-
 def _sha16(seq: str) -> str:
     return hashlib.sha256(seq.upper().encode("utf-8")).hexdigest()[:16]
 
@@ -86,14 +82,14 @@ def _mean_plddt_from_pdb(pdb_path: Path, atom_name: str | None = "CA") -> float:
 def get_af2_structure(
     sequence: str,
     cache_root: Path = Path("~/.cache/toxdl2_af2").expanduser(),
-    msa_mode: str = "single_sequence",   # "mmseqs2" if you run your own MSA server
+    msa_mode: str = "single_sequence",
     num_recycles: int = 1,
-    model_type: str | None = None,       # None = ColabFold default
+    model_type: str | None = None,
     skip_relax: bool = True,
 ) -> Tuple[Path, float]:
     """
-    Returns (best_pdb_path, mean_plddt). Uses colabfold_batch CLI behind the scenes.
-    Caches outputs under cache_root/<sha16>/.
+    Returns (best_pdb_path, mean_plddt).
+    Uses colabfold_batch but lets you override the binary with $TOXDL2_COLABFOLD_BIN.
     """
     key = _sha16(sequence)
     out_dir = cache_root / key
@@ -105,25 +101,24 @@ def get_af2_structure(
         if hits:
             return hits[0], _mean_plddt_from_pdb(hits[0])
 
-    # cache miss → run AF2
+    # run AF2
     out_dir.mkdir(parents=True, exist_ok=True)
     fasta_path = out_dir / "query.fasta"
     _write_fasta(sequence, fasta_path)
 
-    cmd = [
-        "colabfold_batch",
-        "--msa-mode", msa_mode,
-        "--num-recycle", str(num_recycles),
-    ]
-    if skip_relax:
-        cmd += ["--amber"]
-    if model_type:
-        cmd += ["--model", model_type]
-
+    colabfold_bin = os.environ.get("TOXDL2_COLABFOLD_BIN", "colabfold_batch")
+    cmd = [colabfold_bin, "--msa-mode", msa_mode, "--num-recycle", str(num_recycles)]
+    if not skip_relax:            # only enable when you want relaxation
+        cmd.append("--amber")
+    if model_type:                 # correct flag name in ColabFold
+        cmd += ["--model-type", model_type]
     cmd += [str(fasta_path), str(out_dir)]
+
+    # helpful debug
+    print("AF2 cmd:", " ".join(cmd), flush=True)
+
     subprocess.run(cmd, check=True)
 
-    # pick best PDB
     for pat in best_glob:
         hits = sorted(out_dir.glob(pat))
         if hits:
