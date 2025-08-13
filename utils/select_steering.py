@@ -30,7 +30,9 @@ def get_toxicity_scores(model, n_samples=1000, top_k=100, batch_size =8, samplin
 
     most_viable = get_most_viable(generated_sequences, top_k)
 
-    toxic_probs, non_toxic_probs = score_toxicity(most_viable) #
+    toxic_prob, non_toxic_prob = score_toxicity(most_viable) 
+
+    # TODO combine somehow these scores
 
     return refusal_scores
 
