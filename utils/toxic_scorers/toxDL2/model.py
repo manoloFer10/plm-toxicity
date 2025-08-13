@@ -56,9 +56,57 @@ class ToxDL_GCN_Network(torch.nn.Module):
         return self.combine(combined)
     
 
-def load_ToxDL2_model(path):
-    model = torch.load(path)
-    return model
+def load_ToxDL2_model(path, device=None):
+    """
+    Loads a ToxDL2 checkpoint saved either as:
+      - state_dict (preferred), or
+      - full model object (pickle).
+    Works with PyTorch 2.6+ where weights_only=True is default.
+    """
+    device = torch.device(device or ("cuda" if torch.cuda.is_available() else "cpu"))
+    ckpt_path = Path(path)
+    model = ToxDL_GCN_Network().to(device)
+
+    e1 = None
+    # --- Attempt 1: load a state dict with weights_only=True (safe path) ---
+    try:
+        state = torch.load(ckpt_path, map_location=device, weights_only=True)
+        if isinstance(state, dict):
+            for k in ("state_dict", "model_state_dict", "model"):
+                if k in state and isinstance(state[k], dict):
+                    state = state[k]
+                    break
+        model.load_state_dict(state, strict=False)
+        return model
+    except Exception as ex:
+        e1 = ex  # keep for diagnostics
+
+    # --- Attempt 2: allowlist the class and load the full pickle ---
+    try:
+        from torch.serialization import safe_globals
+        with safe_globals([ToxDL_GCN_Network]):
+            obj = torch.load(ckpt_path, map_location=device, weights_only=False)
+
+        if isinstance(obj, ToxDL_GCN_Network):
+            model = obj.to(device)
+        elif isinstance(obj, dict):
+            # normalize common nesting
+            for k in ("state_dict", "model_state_dict", "model"):
+                if k in obj and isinstance(obj[k], dict):
+                    obj = obj[k]
+                    break
+            model.load_state_dict(obj, strict=False)
+        else:
+            raise TypeError(f"Unexpected checkpoint type: {type(obj)}")
+
+        return model
+
+    except Exception as ex2:
+        raise RuntimeError(
+            f"Failed to load checkpoint {ckpt_path}.\n"
+            f"Attempt with weights_only=True failed: {e1}\n"
+            f"Attempt with safe_globals + weights_only=False failed: {ex2}"
+        )
 
 
 def load_domain2vector(path):
