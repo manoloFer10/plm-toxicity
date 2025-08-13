@@ -31,4 +31,21 @@ pip install -r requirements.txt
 
 echo "🎉  Environment ready, dowloading final pkgs..."
 
+echo "Tmux..."
 apt update && apt install -y tmux
+
+echo "Pfam + HMMER..."
+
+conda install -c conda-forge -c bioconda pfam_scan colabfold
+mkdir -p ~/db/pfam && cd ~/db/pfam
+# Download current Pfam release (hosted by InterPro)
+wget https://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/Pfam-A.hmm.gz
+wget https://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/Pfam-A.hmm.dat.gz
+
+# Unpack
+gunzip Pfam-A.hmm.gz
+gunzip Pfam-A.hmm.dat.gz
+
+# Create HMMER indices (required for hmmscan)
+hmmpress Pfam-A.hmm
+# Produces: Pfam-A.hmm.h3{f,i,m,p}
