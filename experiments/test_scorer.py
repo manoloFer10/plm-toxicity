@@ -15,6 +15,8 @@ def get_dataset(path):
     tox = data.filter(lambda example: example['Toxin']).to_pandas().sample(n=50, random_state=42)
     non_tox = data.filter(lambda example: not example['Toxin']).to_pandas().sample(n=50, random_state=42)
 
+    print('Loaded data successfully')
+
     return pd.concat([tox, non_tox])
 
 def eval_sliding(dataset, out_path: Path, plddt_gate: float = 70.0):
@@ -25,7 +27,6 @@ def eval_sliding(dataset, out_path: Path, plddt_gate: float = 70.0):
         tox_p = res["tox_prob"]
         non_tox_p = res["non_tox_prob"]
         plddt = res["mean_plddt"]
-        # si el gating ya está dentro de score(), solo registramos; si no, podrías excluir aquí con:
         # if plddt < plddt_gate: continue
         preds.append(tox_p)
         gts.append(ex["Toxin"]) # label
@@ -49,14 +50,11 @@ def eval_sliding(dataset, out_path: Path, plddt_gate: float = 70.0):
     f1  = float(f1_score(y_true, y_pred))
     prec= float(precision_score(y_true, y_pred, zero_division=0))
     rec = float(recall_score(y_true, y_pred))
-    try:
-        auc = float(roc_auc_score(y_true, np.array(preds)))
-    except ValueError:
-        auc = float("nan")  # por si solo hay una clase
+    auc = float(roc_auc_score(y_true, np.array(preds)))
+    
 
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    # guarda filas por proteína
     df = pd.DataFrame(out_rows).assign(
         acc=acc,
         f1=f1,
@@ -67,7 +65,6 @@ def eval_sliding(dataset, out_path: Path, plddt_gate: float = 70.0):
 
     df.to_csv(out_path, index=False)
 
-    # también imprime resumen
     print(f"N={len(y_true)}  ACC={acc:.3f}  F1={f1:.3f}  PREC={prec:.3f}  REC={rec:.3f}  AUC={auc:.3f}")
 
 if __name__ == "__main__":
