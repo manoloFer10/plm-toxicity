@@ -7,7 +7,7 @@ from utils.scoring import ToxDL2Scorer
 from datasets import load_dataset
 from tqdm import tqdm
 
-def get_dataset(path):
+def get_dataset(path, n_samples):
     data = load_dataset(path)['train']
 
     data = data.filter(lambda example: 200>example['Length']>50) # get all samples higher than the model capability
@@ -15,7 +15,7 @@ def get_dataset(path):
     tox = data.filter(lambda example: example['Toxin']).to_pandas()
     non_tox = data.filter(lambda example: not example['Toxin']).to_pandas()
 
-    n_sample = min(25, min(len(tox), len(non_tox)))
+    n_sample = min(n_samples, min(len(tox), len(non_tox)))
 
     tox = tox.sample(n=n_sample, random_state=42)
     non_tox = non_tox.sample(n=n_sample, random_state=42)
@@ -78,9 +78,10 @@ if __name__ == "__main__":
     ap.add_argument("--data_path", required=True, help="Data dir (HF)")
     ap.add_argument("--out", required=True, help="Ruta CSV de salida")
     ap.add_argument("--plddt_gate", type=float, default=70.0)
+    ap.add_argument("--n_samples", default=50, type=int)
     args = ap.parse_args()
 
-    dataset = get_dataset(args.data_path)
+    dataset = get_dataset(args.data_path, args.n_samples)
     if len(dataset)==0:
         raise SystemExit("No hay secuencias >50 aa en el CSV.")
     eval_sliding(dataset, Path(args.out), plddt_gate=args.plddt_gate)
