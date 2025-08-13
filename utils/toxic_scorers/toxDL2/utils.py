@@ -81,47 +81,103 @@ def _mean_plddt_from_pdb(pdb_path: Path, atom_name: str | None = "CA") -> float:
 
 def get_af2_structure(
     sequence: str,
-    cache_root: Path = Path("~/.cache/toxdl2_af2").expanduser(),
-    msa_mode: str = "single_sequence",
-    num_recycles: int = 1,
-    model_type: str | None = None,
+    out_dir: Path,
+    msa_mode: str = "mmseqs2_uniref",
+    num_recycles: int = 3,
+    model_type: str = None,
     skip_relax: bool = True,
+    verbosity: str = "info"  # "silent" | "warn" | "info" | "debug"
 ) -> Tuple[Path, float]:
     """
-    Returns (best_pdb_path, mean_plddt).
-    Uses colabfold_batch but lets you override the binary with $TOXDL2_COLABFOLD_BIN.
+    Run ColabFold to get AF2 structure for a given sequence.
+
+    Parameters
+    ----------
+    sequence : str
+        Protein sequence.
+    out_dir : Path
+        Output directory where results will be stored.
+    msa_mode : str
+        MSA mode for ColabFold (default: "mmseqs2_uniref").
+    num_recycles : int
+        Number of recycles for AF2 (default: 3).
+    model_type : str
+        AF2 model type (e.g. "AlphaFold2-multimer-v3").
+    skip_relax : bool
+        Whether to skip relaxation step.
+    verbosity : str
+        "silent" | "warn" | "info" | "debug"
+
+    Returns
+    -------
+    Tuple[Path, float]
+        (Path to PDB, mean pLDDT score)
     """
-    key = _sha16(sequence)
-    out_dir = cache_root / key
-    best_glob = ["*rank_001*.pdb", "*best*.pdb", "*.pdb"]
 
-    # cache hit?
-    for pat in best_glob:
-        hits = sorted(out_dir.glob(pat))
-        if hits:
-            return hits[0], _mean_plddt_from_pdb(hits[0])
-
-    # run AF2
     out_dir.mkdir(parents=True, exist_ok=True)
     fasta_path = out_dir / "query.fasta"
     _write_fasta(sequence, fasta_path)
 
     colabfold_bin = os.environ.get("TOXDL2_COLABFOLD_BIN", "colabfold_batch")
     cmd = [colabfold_bin, "--msa-mode", msa_mode, "--num-recycle", str(num_recycles)]
-    if not skip_relax:            # only enable when you want relaxation
+    if not skip_relax:
         cmd.append("--amber")
-    if model_type:                 # correct flag name in ColabFold
+    if model_type:
         cmd += ["--model-type", model_type]
     cmd += [str(fasta_path), str(out_dir)]
 
-    # helpful debug
-    print("AF2 cmd:", " ".join(cmd), flush=True)
+    # ---- verbosity & environment control ----
+    env = os.environ.copy()
+    env.setdefault("TF_CPP_MIN_LOG_LEVEL", "2" if verbosity in {"warn", "silent"} else "1")
+    env.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
+    env.setdefault("XLA_PYTHON_CLIENT_MEM_FRACTION", "0.85")
+    if verbosity in {"warn", "silent"}:
+        env["PYTHONWARNINGS"] = "ignore:Protobuf gencode version:UserWarning"
 
-    subprocess.run(cmd, check=True)
+    log_path = out_dir / "colabfold.log"
+    if verbosity == "silent":
+        stdout_target = subprocess.DEVNULL
+        stderr_target = subprocess.DEVNULL
+    elif verbosity == "warn":
+        stdout_target = open(log_path, "w")
+        stderr_target = subprocess.STDOUT
+    else:
+        stdout_target = open(log_path, "w")
+        stderr_target = subprocess.STDOUT
 
+    if verbosity == "debug":
+        print("AF2 cmd:", " ".join(cmd), flush=True)
+
+    try:
+        subprocess.run(
+            cmd,
+            check=True,
+            env=env,
+            stdout=stdout_target,
+            stderr=stderr_target,
+            text=True
+        )
+    except subprocess.CalledProcessError as e:
+        try:
+            with open(log_path) as lf:
+                tail = "".join(lf.readlines()[-30:])
+        except Exception:
+            tail = "<no log captured>"
+        raise RuntimeError(
+            f"colabfold_batch failed (see {log_path}). Tail:\n{tail}"
+        ) from e
+    finally:
+        if hasattr(stdout_target, "close"):
+            try:
+                stdout_target.close()
+            except Exception:
+                pass
+
+    # pick the best model PDB
+    best_glob = ["*model_1.pdb", "*rank_1_model_*.pdb"]
     for pat in best_glob:
         hits = sorted(out_dir.glob(pat))
         if hits:
             return hits[0], _mean_plddt_from_pdb(hits[0])
 
-    raise RuntimeError(f"No PDB produced by ColabFold in {out_dir}")
+    raise FileNotFoundError("No PDB file found in AF2 output.")

@@ -20,7 +20,7 @@ def get_dataset(path):
     return pd.concat([tox, non_tox])
 
 def eval_sliding(dataset, out_path: Path, plddt_gate: float = 70.0):
-    scorer = ToxDL2Scorer()
+    scorer = ToxDL2Scorer(af2_verbosity="silent")
     preds, gts, out_rows = [], [], []
     for _, ex in tqdm(dataset.iterrows(), total= len(dataset), desc='Testing Scorer'):
         res = scorer.score(ex["Sequence"])  # dict: tox_prob, non_tox_prob, best_window, mean_plddt

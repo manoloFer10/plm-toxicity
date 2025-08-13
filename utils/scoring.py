@@ -17,11 +17,13 @@ class ToxDL2Scorer():
     def __init__(self,
                  ckpt: Path = Path("utils/toxic_scorers/checkpoints/ToxDL2_state.pth"),
                  domain2vec_path: Path | None = None,
-                 device: str | None = None):
+                 device: str | None = None,
+                 af2_verbosity="warn"):
         start_time = time.time()
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.model = self._load_model(ckpt)
         self.domain2vector = self._load_domain2vector(domain2vec_path)
+        self.af2_verbosity = af2_verbosity
         end_time = time.time()
 
         print(f'ToxDL2 loaded in {end_time - start_time} seconds.')
@@ -31,7 +33,7 @@ class ToxDL2Scorer():
         Returns: (pdb_path: Path, mean_plddt: float) for the provided sequence.
         Uses cached AF2 (ColabFold) predictions under ~/.cache/toxdl2_af2/<sha16>/.
         """
-        pdb_path, plddt = get_af2_structure(sequence)
+        pdb_path, plddt = get_af2_structure(sequence, verbosity=self.af2_verbosity)
         return pdb_path, plddt
 
     
