@@ -29,7 +29,6 @@ conda env create -y -f environment.yml
 set +u
 conda activate plmTox
 set -u
-pip install -r requirements.txt
 
 echo "🎉  Environment ready, dowloading final pkgs..."
 
