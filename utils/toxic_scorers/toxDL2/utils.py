@@ -186,10 +186,10 @@ def get_af2_structure_single(
     sequence: str,
     cache_root: Path = Path("~/.cache/toxdl2_af2").expanduser(),
     msa_mode: str = "single_sequence",
-    num_recycles: int = 0,              # lean
+    num_recycles: int = 0,             
     model_type: str | None = "alphafold2_ptm",
-    num_models: int = 1,                # lean
-    num_seeds: int = 1,                 # lean
+    num_models: int = 1,                
+    num_seeds: int = 1,                 
     skip_relax: bool = True,
     verbosity: str = "warn"
 ) -> Tuple[Path, List[float]]:
