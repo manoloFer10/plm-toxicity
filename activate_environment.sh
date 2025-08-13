@@ -30,12 +30,12 @@ set +u
 conda activate plmTox
 set -u
 
-echo "🎉  Environment ready, dowloading final pkgs..."
+echo "Environment ready, dowloading final pkgs..."
 
 echo "Tmux..."
 apt update && apt install -y tmux
 
-echo "Pfam + ColabFold..."
+echo "Pfam..."
 
 # prepare Pfam DB once
 mkdir -p ~/db/pfam && cd ~/db/pfam
@@ -50,3 +50,18 @@ echo 'export PFAM_DB_DIR="$HOME/db/pfam"' >> ~/.bashrc
 # Use conda's libstdc++.so.6
 echo 'export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:${LD_LIBRARY_PATH}"'
 echo 'export LD_PRELOAD="$CONDA_PREFIX/lib/libstdc++.so.6"'
+
+
+echo "LocalColabFold..."
+
+cd $HOME
+git clone https://github.com/YoshitakaMo/localcolabfold
+cd localcolabfold
+bash install_colabbatch_linux.sh     # creates ./colabfold-conda with colabfold_batch
+
+# tell the  scorer to use this binary
+export TOXDL2_COLABFOLD_BIN="$HOME/localcolabfold/localcolabfold/colabfold-conda/bin/colabfold_batch"
+
+
+
+
