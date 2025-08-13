@@ -36,18 +36,17 @@ echo "🎉  Environment ready, dowloading final pkgs..."
 echo "Tmux..."
 apt update && apt install -y tmux
 
-echo "Pfam + HMMER..."
+echo "Pfam + ColabFold..."
 
-conda install -c conda-forge -c bioconda pfam_scan colabfold
+# install bio tools 
+conda install -y -c conda-forge -c bioconda pfam_scan colabfold
+
+# prepare Pfam DB once
 mkdir -p ~/db/pfam && cd ~/db/pfam
-# Download current Pfam release (hosted by InterPro)
-wget https://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/Pfam-A.hmm.gz
-wget https://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/Pfam-A.hmm.dat.gz
-
-# Unpack
-gunzip Pfam-A.hmm.gz
-gunzip Pfam-A.hmm.dat.gz
-
-# Create HMMER indices (required for hmmscan)
+wget -q https://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/Pfam-A.hmm.gz
+wget -q https://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/Pfam-A.hmm.dat.gz
+gunzip -f Pfam-A.hmm.gz Pfam-A.hmm.dat.gz
 hmmpress Pfam-A.hmm
-# Produces: Pfam-A.hmm.h3{f,i,m,p}
+
+#  make it discoverable 
+echo 'export PFAM_DB_DIR="$HOME/db/pfam"' >> ~/.bashrc
