@@ -1,0 +1,3 @@
+id,len,species,tox_prob,non_tox_prob,pred_label,true_label,best_window_start,best_window_end,mean_plddt,acc,f1,precision,recall,roc_auc
+4737,150,Rotavirus C,0.9996733665466309,0.0003266334533691406,1,True,75,125,64.5438,0.5,0.6666666666666666,0.5,1.0,1.0
+33856,154,Oxyuranus scutellatus,0.9995519518852234,0.00044804811477661133,1,False,104,154,29.183400000000002,0.5,0.6666666666666666,0.5,1.0,1.0
