@@ -10,7 +10,7 @@ from tqdm import tqdm
 def get_dataset(path, n_samples):
     data = load_dataset(path)['train']
 
-    data = data.filter(lambda example: 200>example['Length']>50) # get all samples higher than the model capability
+    data = data.filter(lambda example: example['Length']>50) # get all samples higher than the model capability
 
     tox = data.filter(lambda example: example['Toxin']).to_pandas()
     non_tox = data.filter(lambda example: not example['Toxin']).to_pandas()
