@@ -26,7 +26,7 @@ class ToxDL2Scorer():
         start_time = time.time()
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.model = self._load_model(ckpt)
-        self.domain2vector = self._load_domain2vector(domain2vec_path, self.device)
+        self.domain2vector = self._load_domain2vector(domain2vec_path)
         self.af2_verbosity = af2_verbosity
 
         cache_path = Path('cache/')
@@ -243,13 +243,13 @@ class ToxDL2Scorer():
         model.eval()
         return model
     
-    def _load_domain2vector(self, path: Path | None, device = None):
+    def _load_domain2vector(self, path: Path | None):
         try:
             if path is None:
                 path = Path("utils/toxic_scorers/checkpoints/protein_domain_embeddings.model")
             return load_domain2vector(path)
         except Exception as e:
-            raise ModuleNotFoundError(f"Could not load domain2vector: {e} — using zero vector fallback.")
+            raise ModuleNotFoundError(f"Could not load domain2vector: {e}.")
 
 
 
