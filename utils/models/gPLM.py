@@ -73,7 +73,7 @@ class gPLM(ABC):
         completions = []
 
         for i in tqdm(range(0, len(dataset), batch_size)):
-            tokenized_sequences = self.tokenize_instructions_fn(instructions=dataset[i:i + batch_size])
+            tokenized_sequences = self.tokenize_instructions_fn(sequences=dataset[i:i + batch_size])
 
             generation_toks = self.model.generate(
                 input_ids=tokenized_sequences.input_ids.to(self.model.device),

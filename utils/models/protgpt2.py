@@ -36,8 +36,7 @@ def format_sequence_protgpt2(sequence: str):
 
 def tokenize_sequences_fn(tokenizer, sequences):
     prompts = [
-        format_sequence_protgpt2(sequence= sequence)
-        for sequence in sequences
+        sequences
     ]
 
     encoded = tokenizer(
