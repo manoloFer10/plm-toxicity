@@ -414,8 +414,8 @@ dependencies:
   - zlib=1.2.13=h4ab18f5_6
   - zstandard=0.23.0=py311h9ecbd09_2
   - pip:
-    - -f https://data.pyg.org/whl/torch-2.7.1+cu126.html
-  - --extra-index-url https://download.pytorch.org/whl/cu126
+      - "-f https://data.pyg.org/whl/torch-2.7.1+cu126.html"
+      - "--extra-index-url https://download.pytorch.org/whl/cu126"
       - accelerate==1.10.0
       - alphafold-colabfold==2.3.6
       - biopython==1.85
