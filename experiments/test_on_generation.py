@@ -56,3 +56,6 @@ def main():
     model = get_protgpt2()
     avg_toxic, weighted_toxic = get_toxicity_scores(model)
     print(f"Average Toxicity: {avg_toxic}, Weighted Toxicity: {weighted_toxic}")
+
+if __name__ == "__main__":
+    main()
