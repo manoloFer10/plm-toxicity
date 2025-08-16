@@ -23,6 +23,8 @@ set -u
 conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
 conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
 
+conda update -n base -c defaults conda
+
 # create & activate env
 cd plm-toxicity
 conda env create -y -f environment.yml
