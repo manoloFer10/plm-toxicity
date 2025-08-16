@@ -15,8 +15,8 @@ class gPLM(ABC):
         self.eoi_toks = self._get_eoi_toks()
 
         self.model_block_modules = self._get_model_block_modules()
-        self.model_attn_modules = self._get_attn_modules()
-        self.model_mlp_modules = self._get_mlp_modules()
+        #self.model_attn_modules = self._get_attn_modules()
+        #self.model_mlp_modules = self._get_mlp_modules()
 
     def del_model(self):
         if hasattr(self, 'model') and self.model is not None:
