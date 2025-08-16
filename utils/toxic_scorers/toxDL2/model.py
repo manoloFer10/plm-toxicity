@@ -127,7 +127,7 @@ def load_ToxDL2_model(path, device=None):
 
 def load_domain2vector(path):
     domain2vector_model= Word2Vec.load(str(path)) #gensim expects str :(
-    domain2vector_model.eval()
+    domain2vector_model
     return domain2vector_model
 
 
