@@ -2,7 +2,6 @@
 import math
 import pandas as pd
 from utils.scoring import score_toxicity, calculatePerplexity
-from utils.extract_activations import add_hooks
 
 def get_most_viable(model, sequences, top_k=100):
     
