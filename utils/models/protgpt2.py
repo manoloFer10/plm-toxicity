@@ -86,7 +86,7 @@ class ProtGPT2(gPLM):
         return '<|endoftext|>'
 
     def _get_model_block_modules(self):
-        return self.model.model.transformer.h
+        return self.model.transformer.h
 
     def _get_attn_modules(self):
         return torch.nn.ModuleList([block_module.self_attn for block_module in self.model_block_modules])
