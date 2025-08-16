@@ -24,7 +24,7 @@ def get_toxicity_scores(model, n_samples=1000, top_k=100, batch_size =8, samplin
 
     prompts = [
         sampling_seed
-        for _ in n_samples
+        for _ in range(n_samples)
     ]
 
     generated_sequences = model.generate_de_novo(prompts, batch_size=batch_size)
