@@ -1,7 +1,7 @@
 import torch
 import functools
 
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from utils.models.gPLM import gPLM
 from typing import List
 from torch import Tensor
@@ -21,6 +21,7 @@ def get_protgpt2():
 
 def get_protgpt2_generation_pipeline():
     protgpt2 = pipeline('text-generation', model="nferruz/ProtGPT2")
+    return protgpt2
 
 
 def add_endlines(sequence):
@@ -50,6 +51,7 @@ def tokenize_sequences_fn(tokenizer, sequences):
 
 
 class ProtGPT2(gPLM):
+
     def _load_model(self, model_path, dtype= torch.float16):
         model = AutoModelForCausalLM.from_pretrained(
             model_path,

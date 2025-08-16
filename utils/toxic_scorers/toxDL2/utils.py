@@ -6,14 +6,14 @@ from typing import Tuple
 DEFAULT_PFAM_DB = Path(os.environ.get("PFAM_DB_DIR", "~/db/pfam")).expanduser()
 
 
-def pfam_domains(sequence: str, pfam_db_dir: Path | None = None) -> List[str]:
+def pfam_domains(sequence: str, pfam_db_dir: Path | None = None,
+                 use_ga: bool = True, min_hmm_cov: float = 0.5) -> List[str]:
     """
-    Try to call pfam_scan.pl if available (requires HMMER + Pfam-A.hmm).
-    Returns a list of domain 'names' (or accessions) to be embedded downstream.
-    Falls back to [] if tooling or DB isn't available.
+    Return high-confidence Pfam domains for a single sequence.
+    use_ga: if True, apply Pfam's curated GA thresholds (--cut_ga).
+    min_hmm_cov: minimum fraction of HMM length covered by the alignment.
     """
     pfam_db_dir = pfam_db_dir or DEFAULT_PFAM_DB
-
     pfam_scan = shutil.which("pfam_scan.pl")
     if not pfam_scan or pfam_db_dir is None:
         return []
@@ -21,10 +21,10 @@ def pfam_domains(sequence: str, pfam_db_dir: Path | None = None) -> List[str]:
     with tempfile.TemporaryDirectory() as td:
         td = Path(td)
         fasta = td / "q.faa"
+        out = td / "pfam.out"
         with fasta.open("w") as f:
             f.write(">q\n")
             f.write(sequence + "\n")
-        out = td / "pfam.out"
 
         cmd = [
             pfam_scan,
@@ -34,23 +34,45 @@ def pfam_domains(sequence: str, pfam_db_dir: Path | None = None) -> List[str]:
             "-e_seq", "1e-5",
             "-cpu", "1",
         ]
+        if use_ga:
+            cmd += ["-cut_ga"]
+
         subprocess.run(cmd, stdout=out.open("w"), stderr=subprocess.DEVNULL, check=True)
 
-        # Parse simple whitespace table; take HMM names (column 6) or ACC (column 5)
         domains = []
         with out.open() as fh:
             for line in fh:
                 if line.startswith("#") or not line.strip():
                     continue
                 parts = line.split()
-                # columns vary by pfam_scan version; use defensive indexing
-                hmm_acc = parts[5] if len(parts) > 5 else None
+                # pfam_scan columns vary a bit by version; defensively index:
+                # Typical order includes: seq_id, alignment_start, alignment_end, hmm_acc, hmm_name,
+                # type, hmm_start, hmm_end, seq_start, seq_end, evalue, score, clu, ...
+                hmm_acc  = parts[5] if len(parts) > 5 else None
                 hmm_name = parts[6] if len(parts) > 6 else None
-                if hmm_name:
-                    domains.append(hmm_name)
-                elif hmm_acc:
-                    domains.append(hmm_acc)
-        return domains
+
+                # Try to compute HMM coverage = (hmm_end - hmm_start + 1)/HMM_len
+                # Many pfam_scan builds print HMM length right after hmm_end; if not available, skip cov filter.
+                try:
+                    hmm_start = int(parts[7])
+                    hmm_end   = int(parts[8])
+                    hmm_len   = int(parts[9])  # may differ across versions; guard below
+                    hmm_cov = (hmm_end - hmm_start + 1) / max(1, hmm_len)
+                except Exception:
+                    hmm_cov = 1.0  # if we can't parse, don't fail—assume full coverage
+
+                if hmm_cov < min_hmm_cov:
+                    continue
+
+                domains.append(hmm_name or hmm_acc)
+
+        # Deduplicate while preserving order
+        seen, clean = set(), []
+        for d in domains:
+            if d and d not in seen:
+                seen.add(d)
+                clean.append(d)
+        return clean
     
 
 

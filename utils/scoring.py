@@ -26,7 +26,7 @@ class ToxDL2Scorer():
         start_time = time.time()
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.model = self._load_model(ckpt)
-        self.domain2vector = self._load_domain2vector(domain2vec_path)
+        self.domain2vector = self._load_domain2vector(domain2vec_path, self.device)
         self.af2_verbosity = af2_verbosity
 
         cache_path = Path('cache/')
@@ -139,11 +139,7 @@ class ToxDL2Scorer():
 
 
     def score(self, seq: str, setting: str = "max_window"):
-        windows = [(0, len(seq))] if len(seq) <= WIN else [
-            (i, min(i + WIN, len(seq))) for i in range(0, len(seq) - WIN + 1, STRIDE)
-        ]
-        if len(seq) > WIN and windows[-1][1] < len(seq):
-            windows.append((len(seq) - WIN, len(seq)))
+        windows = [(0, len(seq))] #
 
         # ---- one-pass prep (AF2+ESM+PFAM once)
         seq, coords, plddt_per_res, token_reps, dom_vec = self._prepare(seq)
@@ -152,7 +148,7 @@ class ToxDL2Scorer():
         def window_plddt(s, e):
             return float(np.nanmean(plddt_per_res[s:e])) if e > s else float("nan")
 
-        # Build graphs (cheap; no recompute of AF2/ESM/PFAM here)
+        # build graphs 
         graphs = self._make_window_graphs(coords, token_reps, dom_vec, windows)
 
         # Batch inference (robust to future changes in batch size)
