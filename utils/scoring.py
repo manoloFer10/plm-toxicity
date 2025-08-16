@@ -243,7 +243,7 @@ class ToxDL2Scorer():
         model.eval()
         return model
     
-    def _load_domain2vector(self, path: Path | None):
+    def _load_domain2vector(self, path: Path | None, device = None):
         try:
             if path is None:
                 path = Path("utils/toxic_scorers/checkpoints/protein_domain_embeddings.model")
