@@ -81,6 +81,9 @@ class ProtGPT2(gPLM):
 
     def _get_eoi_toks(self):
         return self.tokenizer.encode('<|endoftext|>', add_special_tokens=False)
+    
+    def _get_eoi_str(self):
+        return '<|endoftext|>'
 
     def _get_model_block_modules(self):
         return self.model.model.transformer.h

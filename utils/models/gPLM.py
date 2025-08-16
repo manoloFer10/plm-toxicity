@@ -40,6 +40,10 @@ class gPLM(ABC):
         pass
 
     @abstractmethod
+    def _get_eoi_str(self):
+        pass
+
+    @abstractmethod
     def _get_model_block_modules(self):
         pass
 
@@ -59,9 +63,13 @@ class gPLM(ABC):
     def _get_act_add_mod_fn(self, direction: Float[Tensor, "d_model"], coeff: float, layer: int):
         pass
     
-    def generate_completions(self, dataset: list[str], batch_size=8, max_new_tokens=100):
+    def generate_de_novo(self, dataset: list[str], batch_size=8, max_new_tokens=100):
         generation_config = GenerationConfig(max_new_tokens=max_new_tokens, do_sample=False)
         generation_config.pad_token_id = self.tokenizer.pad_token_id
+
+        eoi= self._get_eoi_str() + '\n'
+
+        dataset = [eoi+seq for seq in dataset]
 
         completions = []
 

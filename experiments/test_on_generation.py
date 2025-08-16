@@ -27,7 +27,7 @@ def get_toxicity_scores(model, n_samples=1000, top_k=100, batch_size =8, samplin
         for _ in n_samples
     ]
 
-    generated_sequences = model.generate_completions(prompts, batch_size=batch_size)
+    generated_sequences = model.generate_de_novo(prompts, batch_size=batch_size)
 
     most_viable, ppls = get_most_viable(generated_sequences, top_k)
 
