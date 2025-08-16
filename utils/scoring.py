@@ -8,6 +8,7 @@ from utils.toxic_scorers.toxDL2.utils import pfam_domains, get_af2_structure_sin
 from pathlib import Path
 from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
+from tqdm import tqdm
 
 
 # Los modelos de toxicidad sólo pueden ver 50 aa. OK -> agarremos todas las proteínas de longitud mayor a 50 aa y veamos si las catalogan bien.
@@ -261,7 +262,7 @@ def score_toxicity(sequences):
     Estimates the toxicity of a set of aa sequences by averaging the toxicity probabilities for each.
     '''
 
-    results = [TOXIC_SCORER.score(seq) for seq in sequences]
+    results = [TOXIC_SCORER.score(seq) for seq in tqdm(sequences, total=len(sequences), desc= 'Scoring toxicity')]
     toxic_probs = torch.tensor([r["tox_prob"] for r in results], dtype=torch.float32)
     non_toxic_probs = torch.tensor([r["non_tox_prob"] for r in results], dtype=torch.float32)
 

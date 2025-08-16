@@ -2,6 +2,7 @@
 import math
 import pandas as pd
 from utils.scoring import score_toxicity, calculatePerplexity
+from tqdm import tqdm
 
 def get_most_viable(model, sequences, top_k=100):
     
