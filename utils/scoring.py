@@ -19,7 +19,7 @@ PLDDT_MIN = 70.0   # confidence minimum for AF pLDDT
 
 class ToxDL2Scorer():
     def __init__(self,
-                 ckpt: Path = Path("utils\\toxic_scorers\\checkpoints\\ToxDL2_model.pth"),
+                 ckpt: Path = Path("utils/toxic_scorers/checkpoints/ToxDL2_model.pth"),
                  domain2vec_path: Path | None = None,
                  device: str | None = None,
                  af2_verbosity="warn"):
