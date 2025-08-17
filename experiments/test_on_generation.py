@@ -33,8 +33,8 @@ def get_toxicity_scores(model, n_samples=1000, top_k=100, batch_size =8, samplin
 
     toxic_prob, non_toxic_prob = score_toxicity(most_viable) 
     df = pd.DataFrame(
-            zip(most_viable, toxic_prob, non_toxic_prob),
-            columns=["sequence", "tox_score", "non_tox score"],
+            zip(most_viable, toxic_prob, non_toxic_prob, ppls),
+            columns=["sequence", "tox_score", "non_tox score", "ppl"],
         )
     df.to_csv("toxicity_scores.csv", index=False)
 
