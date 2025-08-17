@@ -10,6 +10,8 @@ class gPLM(ABC):
         self.model_name_or_path = model_path
         self.model: AutoModelForCausalLM = self._load_model(model_path)
         self.tokenizer: AutoTokenizer = self._load_tokenizer(model_path)
+
+        self.device = self.model.device
         
         self.tokenize_instructions_fn = self._get_tokenize_instructions_fn()
         self.eoi_toks = self._get_eoi_toks()
