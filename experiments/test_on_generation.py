@@ -8,7 +8,7 @@ def get_most_viable(model, sequences, top_k=100):
     
     tokenizer_fn = model.tokenize_instructions_fn
 
-    scored = [(s, float(calculatePerplexity(s, model, tokenizer_fn))) for s in sequences]
+    scored = [(s, float(calculatePerplexity(s, model, tokenizer_fn))) for s in tqdm(sequences, total=len(sequences), desc="Calculating perplexity")]
     scored.sort(key=lambda x: x[1])  # lowest perplexity first
     scored = scored[:max(0, top_k)]
     sequences = [s for s, _ in scored]
@@ -54,7 +54,7 @@ def get_protgpt2():
 
 def main():
     model = get_protgpt2()
-    avg_toxic, weighted_toxic = get_toxicity_scores(model)
+    avg_toxic, weighted_toxic = get_toxicity_scores(model, batch_size=32)
     print(f"Average Toxicity: {avg_toxic}, Weighted Toxicity: {weighted_toxic}")
 
 if __name__ == "__main__":
