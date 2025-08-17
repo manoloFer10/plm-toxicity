@@ -56,7 +56,7 @@ git clone https://github.com/YoshitakaMo/localcolabfold
 cd localcolabfold
 bash install_colabbatch_linux.sh     # creates ./colabfold-conda with colabfold_batch
 
-conda activate /root/localcolabfold/localcolabfold/colabfold-conda)
+conda activate /root/localcolabfold/localcolabfold/colabfold-conda
 # Use conda's libstdc++.so.6
 echo 'export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:${LD_LIBRARY_PATH}"'
 echo 'export LD_PRELOAD="$CONDA_PREFIX/lib/libstdc++.so.6"'
