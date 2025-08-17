@@ -95,13 +95,9 @@ class gPLM(ABC):
 
             for generation_idx, generation in enumerate(generation_toks):
                 generated = self.tokenizer.decode(generation, skip_special_tokens=True).strip()
-                generated = remove_endlines(generated)
                 completions.append(
                     dataset[i + generation_idx] + generated #input sequence + generation
                 )
 
         return completions
         
-def remove_endlines(text: str, replacement: str = "") -> str:
-    """Replace '\n' with `replacement` (default: trim)."""
-    return text.replace("\n", replacement)

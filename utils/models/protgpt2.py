@@ -47,6 +47,12 @@ def tokenize_sequences_fn(sequences, tokenizer):
     )
     return encoded
 
+
+def clean_protgpt2_generation(text: str, replacement: str = "") -> str:
+    """Replace '\n' with `replacement` (default: trim)."""
+    return text.replace("\n", replacement).replace("<|endoftext|>", "")
+
+
 class ProtGPT2(gPLM):
 
     def _load_model(self, model_path, dtype= torch.float16):
