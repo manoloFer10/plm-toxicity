@@ -95,7 +95,7 @@ class gPLM(ABC):
                 generated = self.tokenizer.decode(generation, skip_special_tokens=True).strip()
                 generated = remove_endlines(generated)
                 completions.append(
-                    generated
+                    dataset[i + generation_idx] + generated #input sequence + generation
                 )
 
         return completions
