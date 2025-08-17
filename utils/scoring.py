@@ -272,10 +272,13 @@ def score_toxicity(sequences):
     return estimated_toxic_prob, estimated_non_toxic_prob
 
 
-def calculatePerplexity(sequence, model, tokenizer_fn):
-    encoding = tokenizer_fn(sequence)
+def calculatePerplexity(sequences, model, tokenizer_fn):
+    encoding = tokenizer_fn(text=sequences,
+                            padding=True,
+                            truncation=False,
+                            return_tensors="pt")
     input_ids = encoding["input_ids"].to(model.device)
     with torch.no_grad():
-        outputs = model(input_ids, labels=input_ids)
+        outputs = model.model(input_ids, labels=input_ids)
     loss, logits = outputs[:2]
     return math.exp(loss)

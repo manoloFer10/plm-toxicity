@@ -4,11 +4,16 @@ import pandas as pd
 from utils.scoring import score_toxicity, calculatePerplexity
 from tqdm import tqdm
 
-def get_most_viable(model, sequences, top_k=100):
+def get_most_viable(model, sequences, top_k=100, batch_size = 8):
     
     tokenizer_fn = model.tokenize_instructions_fn
+    
+    scored = []
+    for i in range(0, len(sequences), batch_size):
+        batch_sequences = sequences[i:i + batch_size]
+        ppl = calculatePerplexity(batch_sequences, model, tokenizer_fn)
+        scored.append((batch_sequences, ppl))
 
-    scored = [(s, float(calculatePerplexity(s, model, tokenizer_fn))) for s in tqdm(sequences, total=len(sequences), desc="Calculating perplexity")]
     scored.sort(key=lambda x: x[1])  # lowest perplexity first
     scored = scored[:max(0, top_k)]
     sequences = [s for s, _ in scored]
@@ -29,7 +34,7 @@ def get_toxicity_scores(model, n_samples=1000, top_k=100, batch_size =8, samplin
 
     generated_sequences = model.generate_de_novo(prompts, batch_size=batch_size)
 
-    most_viable, ppls = get_most_viable(model, generated_sequences, top_k)
+    most_viable, ppls = get_most_viable(model, generated_sequences, top_k, batch_size=batch_size)
 
     toxic_prob, non_toxic_prob = score_toxicity(most_viable) 
     df = pd.DataFrame(
