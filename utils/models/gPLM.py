@@ -63,17 +63,25 @@ class gPLM(ABC):
         pass
     
     def generate_de_novo(self, dataset: list[str], batch_size=8, max_new_tokens=100):
-        generation_config = GenerationConfig(max_new_tokens=max_new_tokens, do_sample=False)
+        generation_config = GenerationConfig(max_new_tokens=max_new_tokens, 
+                                             do_sample=True,
+                                             repetition_penalty=1.2,
+                                             top_k=950,
+                                             eos_token_id=0
+                                             )
         generation_config.pad_token_id = self.tokenizer.pad_token_id
 
-        eoi= self._get_eoi_str() + '\n'
+        eoi= '<|endoftext|>' + '\n'
 
         dataset = [eoi+seq for seq in dataset]
 
         completions = []
 
-        for i in tqdm(range(0, len(dataset), batch_size)):
-            tokenized_sequences = self.tokenize_instructions_fn(sequences=dataset[i:i + batch_size])
+        for i in tqdm(range(0, len(dataset), batch_size), total=len(dataset)//batch_size, desc='Generating proteins...'):
+            tokenized_sequences = self.tokenizer(text=dataset[i:i + batch_size],
+                                            padding=True,
+                                            truncation=False,
+                                            return_tensors="pt")
 
             generation_toks = self.model.generate(
                 input_ids=tokenized_sequences.input_ids.to(self.model.device),
