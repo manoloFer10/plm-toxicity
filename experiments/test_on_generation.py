@@ -29,7 +29,7 @@ def get_toxicity_scores(model, n_samples=1000, top_k=100, batch_size =8, samplin
 
     generated_sequences = model.generate_de_novo(prompts, batch_size=batch_size)
 
-    most_viable, ppls = get_most_viable(generated_sequences, top_k)
+    most_viable, ppls = get_most_viable(model, generated_sequences, top_k)
 
     toxic_prob, non_toxic_prob = score_toxicity(most_viable) 
     df = pd.DataFrame(
