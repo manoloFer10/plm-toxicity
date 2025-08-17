@@ -34,7 +34,7 @@ def format_sequence_protgpt2(sequence: str):
     return '<|endoftext|>' + endlined + '<|endoftext|>'
 
 
-def tokenize_sequences_fn(tokenizer, sequences):
+def tokenize_sequences_fn(sequences, tokenizer):
     prompts = [
         sequences
     ]
