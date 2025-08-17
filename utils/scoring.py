@@ -281,9 +281,21 @@ def calculatePerplexity(sequences, model, tokenizer_fn):
             input_ids=input_ids,
             attention_mask=attention_mask,
             labels=input_ids,
-            reduction="none",
         )
-    token_losses = outputs.loss
-    per_seq_loss = token_losses.mean(dim=1)
+    logits = outputs.logits
+    shift_logits = logits[:, :-1, :].contiguous()
+    shift_labels = input_ids[:, 1:].contiguous()
+    loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
+    token_losses = loss_fct(
+        shift_logits.view(-1, shift_logits.size(-1)),
+        shift_labels.view(-1),
+    )
+    token_losses = token_losses.view(shift_labels.size())
+    if attention_mask is not None:
+        mask = attention_mask[..., 1:]
+        token_losses = token_losses * mask
+        per_seq_loss = token_losses.sum(dim=1) / mask.sum(dim=1)
+    else:
+        per_seq_loss = token_losses.mean(dim=1)
     perplexities = torch.exp(per_seq_loss)
     return perplexities
