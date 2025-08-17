@@ -49,11 +49,6 @@ hmmpress Pfam-A.hmm
 #  make it discoverable 
 echo 'export PFAM_DB_DIR="$HOME/db/pfam"' >> ~/.bashrc
 
-# Use conda's libstdc++.so.6
-echo 'export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:${LD_LIBRARY_PATH}"'
-echo 'export LD_PRELOAD="$CONDA_PREFIX/lib/libstdc++.so.6"'
-
-
 echo "LocalColabFold..."
 
 cd $HOME
@@ -61,8 +56,16 @@ git clone https://github.com/YoshitakaMo/localcolabfold
 cd localcolabfold
 bash install_colabbatch_linux.sh     # creates ./colabfold-conda with colabfold_batch
 
+conda activate /root/localcolabfold/localcolabfold/colabfold-conda)
+# Use conda's libstdc++.so.6
+echo 'export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:${LD_LIBRARY_PATH}"'
+echo 'export LD_PRELOAD="$CONDA_PREFIX/lib/libstdc++.so.6"'
+
 # tell the  scorer to use this binary
 export TOXDL2_COLABFOLD_BIN="$HOME/localcolabfold/localcolabfold/colabfold-conda/bin/colabfold_batch"
+
+conda deactivate
+cd $HOME/plm-toxicity #finish on main dir
 
 
 
