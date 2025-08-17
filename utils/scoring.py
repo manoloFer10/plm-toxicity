@@ -263,19 +263,27 @@ def score_toxicity(sequences):
     '''
 
     results = [TOXIC_SCORER.score(seq) for seq in tqdm(sequences, total=len(sequences), desc= 'Scoring toxicity')]
-    toxic_probs = torch.tensor([r["tox_prob"] for r in results], dtype=torch.float32)
-    non_toxic_probs = torch.tensor([r["non_tox_prob"] for r in results], dtype=torch.float32)
-
-    estimated_toxic_prob = torch.mean(toxic_probs)
-    estimated_non_toxic_prob = torch.mean(non_toxic_probs)
-
-    return estimated_toxic_prob, estimated_non_toxic_prob
+    toxic_probs = [r["tox_prob"] for r in results]
+    non_toxic_probs = [r["non_tox_prob"] for r in results]
+    return toxic_probs, non_toxic_probs
 
 
 def calculatePerplexity(sequences, model, tokenizer_fn):
+    if isinstance(sequences, str):
+        sequences = [sequences]
     encoding = tokenizer_fn(sequences)
     input_ids = encoding["input_ids"].to(model.device)
+    attention_mask = encoding.get("attention_mask", None)
+    if attention_mask is not None:
+        attention_mask = attention_mask.to(model.device)
     with torch.no_grad():
-        outputs = model.model(input_ids, labels=input_ids)
-    loss, logits = outputs[:2]
-    return math.exp(loss)
+        outputs = model.model(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            labels=input_ids,
+            reduction="none",
+        )
+    token_losses = outputs.loss
+    per_seq_loss = token_losses.mean(dim=1)
+    perplexities = torch.exp(per_seq_loss)
+    return perplexities
