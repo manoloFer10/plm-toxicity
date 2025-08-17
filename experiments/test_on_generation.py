@@ -11,8 +11,9 @@ def get_most_viable(model, sequences, top_k=100, batch_size = 8):
     scored = []
     for i in range(0, len(sequences), batch_size):
         batch_sequences = sequences[i:i + batch_size]
-        ppl = calculatePerplexity(batch_sequences, model, tokenizer_fn)
-        scored.extend(zip(batch_sequences, ppl.to_list()[1]))
+        ppls = calculatePerplexity(batch_sequences, model, tokenizer_fn)
+        for seq, ppl in zip(batch_sequences, ppls):
+           scored.append((seq, float(ppl)))
 
     scored.sort(key=lambda x: x[1])  # lowest perplexity first
     scored = scored[:max(0, top_k)]
