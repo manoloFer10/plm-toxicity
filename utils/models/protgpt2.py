@@ -35,19 +35,17 @@ def format_sequence_protgpt2(sequence: str):
 
 
 def tokenize_sequences_fn(sequences, tokenizer):
-    prompts = [
-        sequences
-    ]
-
+    if isinstance(sequences, str):
+       prompts = [sequences]
+    else:
+        prompts = sequences
     encoded = tokenizer(
         prompts,
         padding=True,
         truncation=False,
-        return_tensors="pt"
+        return_tensors="pt",
     )
-
     return encoded
-
 
 class ProtGPT2(gPLM):
 
