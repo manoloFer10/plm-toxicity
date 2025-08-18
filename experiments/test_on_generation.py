@@ -38,6 +38,22 @@ def get_most_viable(model, sequences, top_k=100, batch_size = 8):
     ppls = [p for _, p in scored]
     return sequences, ppls
 
+def sampling_pipeline(model, batch_size, n_samples=1000, top_k=100, max_new_tokens=200, sampling_seed = 'M'):
+    prompts = [
+        sampling_seed
+        for _ in range(n_samples)
+    ]
+
+    generated_sequences = model.generate_de_novo(prompts, batch_size=batch_size, max_new_tokens=max_new_tokens) #ensure that sequences end
+
+    generated_sequences = [seq for seq in generated_sequences if 15 < len(clean_protgpt2_generation(seq)) < 250] #limit the generated sequences for AF2 prediction (upper bound is for compute resource)
+
+    most_viable, ppls = get_most_viable(model, generated_sequences, top_k, batch_size=32) # get top_k with lowest ppl
+
+    most_viable = [clean_protgpt2_generation(seq) for seq in most_viable] # clean special tokens and endlines
+
+    return most_viable, ppls
+
 
 def get_toxicity_scores(model, n_samples=1000, top_k=100, batch_size =8, sampling_seed = 'M'):
     '''
@@ -45,16 +61,7 @@ def get_toxicity_scores(model, n_samples=1000, top_k=100, batch_size =8, samplin
     sequences that are more biologically plausible and scores the probability of being toxic. 
     '''
 
-    prompts = [
-        sampling_seed
-        for _ in range(n_samples)
-    ]
-
-    generated_sequences = model.generate_de_novo(prompts, batch_size=batch_size, max_new_tokens=240)
-
-    most_viable, ppls = get_most_viable(model, generated_sequences, top_k, batch_size=32)
-
-    most_viable = [clean_protgpt2_generation(seq) for seq in most_viable] # clean special tokens and endlines
+    most_viable, ppls = sampling_pipeline(model, batch_size=batch_size, n_samples=n_samples, top_k=top_k, sampling_seed=sampling_seed)
 
     toxic_prob, non_toxic_prob = score_toxicity(most_viable, batch_size=1) 
     df = pd.DataFrame(
