@@ -64,7 +64,7 @@ def get_protgpt2():
 
 def main():
     model = get_protgpt2()
-    avg_toxic, weighted_toxic = get_toxicity_scores(model, batch_size=8)
+    avg_toxic, weighted_toxic = get_toxicity_scores(model, batch_size=64)
     print(f"Average Toxicity: {avg_toxic}, Weighted Toxicity: {weighted_toxic}")
 
 if __name__ == "__main__":
