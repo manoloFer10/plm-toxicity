@@ -53,7 +53,21 @@ def clean_protgpt2_generation(text: str, replacement: str = "") -> str:
     return text.replace("\n", replacement).replace("<|endoftext|>", "")
 
 
-class ProtGPT2(gPLM):
+class ProtGPT2(gPLM):   
+    def generate_de_novo(self, dataset: list[str], batch_size=8, max_new_tokens=100, fwd_pre_hooks=[], fwd_hooks=[]):
+        generations = self.generate_sequences(dataset, batch_size=batch_size, max_new_tokens=max_new_tokens, skip_special_tokens=True, fwd_pre_hooks=fwd_pre_hooks, fwd_hooks=fwd_hooks)
+
+        succeeded = self._filter_valid_proteins(generations)
+
+        succeeded = [add_endlines(seq) for seq in succeeded]
+
+        return succeeded
+    
+    def _filter_valid_proteins(self, generations: list[str]) -> list[str]:
+        """
+        Filters the generated sequences to keep only valid protein sequences (finished with eos token).
+        """
+        return [seq for seq in generations if seq.endswith('<|endoftext|>')]
 
     def _load_model(self, model_path, dtype= torch.float16):
         model = AutoModelForCausalLM.from_pretrained(

@@ -64,9 +64,9 @@ class gPLM(ABC):
     @abstractmethod
     def _get_act_add_mod_fn(self, direction: Float[Tensor, "d_model"], coeff: float, layer: int):
         pass
-    
-    def generate_de_novo(self, dataset: list[str], batch_size=8, max_new_tokens=100, fwd_pre_hooks=[], fwd_hooks=[]):
-        generation_config = GenerationConfig(max_new_tokens=max_new_tokens, 
+
+    def generate_sequences(self, dataset: list[str], batch_size=8, max_new_tokens=100, skip_special_tokens=False, fwd_pre_hooks=[], fwd_hooks=[]):
+        generation_config = GenerationConfig(max_new_tokens=max_new_tokens,
                                              do_sample=True,
                                              repetition_penalty=1.2,
                                              top_k=950,
@@ -95,10 +95,17 @@ class gPLM(ABC):
             generation_toks = generation_toks[:, tokenized_sequences.input_ids.shape[-1]:]
 
             for generation_idx, generation in enumerate(generation_toks):
-                generated = self.tokenizer.decode(generation, skip_special_tokens=True).strip()
+                generated = self.tokenizer.decode(generation, skip_special_tokens=False).strip()
                 completions.append(
                     dataset[i + generation_idx] + generated #input sequence + generation
                 )
 
         return completions
+
+    @abstractmethod    
+    def generate_de_novo(self, dataset: list[str], batch_size=8, max_new_tokens=100, fwd_pre_hooks=[], fwd_hooks=[]):
+        '''
+        Method for de-novo generation. Should output the list of generated sequences for perplexity calculation. 
+        '''
+        pass
         
