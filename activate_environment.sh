@@ -17,7 +17,7 @@ rm $MINI
 echo "✅  Conda installed."
 
 # ── 2. make conda available in this shell
-if ! grep -q 'miniconda3/etc/profile.d/conda.sh' ~/.bashrc; then
+if ! grep -q '$BASE/miniconda3/etc/profile.d/conda.sh' ~/.bashrc; then
   echo '. "$BASE/miniconda3/etc/profile.d/conda.sh"' >> ~/.bashrc
 fi
 set +u
@@ -48,7 +48,7 @@ apt update && apt install -y tmux
 echo "Pfam..."
 
 # prepare Pfam DB once
-mkdir -p ~/db/pfam && cd ~/db/pfam
+mkdir -p $BASE/db/pfam && cd $BASE/db/pfam
 wget -q https://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/Pfam-A.hmm.gz
 wget -q https://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/Pfam-A.hmm.dat.gz
 gunzip -f Pfam-A.hmm.gz Pfam-A.hmm.dat.gz
