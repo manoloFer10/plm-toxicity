@@ -92,7 +92,7 @@ class ProtGPT2(gPLM):
         return self.model.transformer.h
 
     def _get_attn_modules(self):
-        return torch.nn.ModuleList([block_module.self_attn for block_module in self.model_block_modules])
+        return torch.nn.ModuleList([block_module.attn for block_module in self.model_block_modules])
     
     def _get_mlp_modules(self):
         return torch.nn.ModuleList([block_module.mlp for block_module in self.model_block_modules])
