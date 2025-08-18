@@ -35,7 +35,7 @@ def get_toxicity_scores(model, n_samples=1000, top_k=100, batch_size =8, samplin
         for _ in range(n_samples)
     ]
 
-    generated_sequences = model.generate_de_novo(prompts, batch_size=batch_size)
+    generated_sequences = model.generate_de_novo(prompts, batch_size=batch_size, max_new_tokens=240)
 
     most_viable, ppls = get_most_viable(model, generated_sequences, top_k, batch_size=batch_size)
 
@@ -64,7 +64,7 @@ def get_protgpt2():
 
 def main():
     model = get_protgpt2()
-    avg_toxic, weighted_toxic = get_toxicity_scores(model, batch_size=32)
+    avg_toxic, weighted_toxic = get_toxicity_scores(model, batch_size=8)
     print(f"Average Toxicity: {avg_toxic}, Weighted Toxicity: {weighted_toxic}")
 
 if __name__ == "__main__":
