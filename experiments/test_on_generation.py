@@ -41,7 +41,7 @@ def get_toxicity_scores(model, n_samples=1000, top_k=100, batch_size =8, samplin
 
     most_viable = [clean_protgpt2_generation(seq) for seq in most_viable] # clean special tokens and endlines
 
-    toxic_prob, non_toxic_prob = score_toxicity(most_viable) 
+    toxic_prob, non_toxic_prob = score_toxicity(most_viable, batch_size=batch_size) 
     df = pd.DataFrame(
             zip(most_viable, toxic_prob, non_toxic_prob, ppls),
             columns=["sequence", "tox_score", "non_tox score", "ppl"],
