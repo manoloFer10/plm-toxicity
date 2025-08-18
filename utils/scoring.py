@@ -192,7 +192,7 @@ class ToxDL2Scorer():
         }
     
 
-    def score_batch(self, seqs: list[str], max_workers=3) -> list[dict]:
+    def score_batch(self, seqs: list[str], max_workers=2) -> list[dict]:
         if not seqs:
             return []
         
