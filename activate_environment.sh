@@ -1,6 +1,9 @@
 set -euo pipefail                       # fail fast & catch unset vars
 
-PWD=$(pwd)
+BASE="${RUNPOD_PERSISTENT_DIR:-/workspace}"
+[ -d "$BASE" ] || BASE="$HOME"
+
+echo "$BASE"
 
 echo "🔥  Installing Miniconda …"
 
@@ -9,16 +12,16 @@ MINI=Miniconda3-latest-Linux-x86_64.sh        # ← exists in the archive
 
 wget -q https://repo.anaconda.com/miniconda/$MINI
 chmod +x $MINI
-./$MINI -b -p "$PWD/miniconda3"
+./$MINI -b -p "$BASE/miniconda3"
 rm $MINI
 echo "✅  Conda installed."
 
 # ── 2. make conda available in this shell
 if ! grep -q 'miniconda3/etc/profile.d/conda.sh' ~/.bashrc; then
-  echo '. "$PWD/miniconda3/etc/profile.d/conda.sh"' >> ~/.bashrc
+  echo '. "$BASE/miniconda3/etc/profile.d/conda.sh"' >> ~/.bashrc
 fi
 set +u
-source "$PWD/miniconda3/etc/profile.d/conda.sh"
+source "$BASE/miniconda3/etc/profile.d/conda.sh"
 set -u
 
 # accept ToS (ok with -u off or on now)
@@ -33,6 +36,9 @@ conda env create -y -f environment.yml
 set +u
 conda activate plmTox
 set -u
+
+# make sure to use the conda env library path
+export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:$LD_LIBRARY_PATH"
 
 echo "Environment ready, dowloading final pkgs..."
 
@@ -49,14 +55,11 @@ gunzip -f Pfam-A.hmm.gz Pfam-A.hmm.dat.gz
 hmmpress Pfam-A.hmm
 
 #  make it discoverable 
-echo 'export PFAM_DB_DIR="$HOME/db/pfam"' >> ~/.bashrc
-
-# make sure to use the conda env library path
-export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:$LD_LIBRARY_PATH"
+echo 'export PFAM_DB_DIR="$BASE/db/pfam"' >> ~/.bashrc
 
 echo "LocalColabFold..."
 
-cd $PWD
+cd $BASE
 git clone https://github.com/YoshitakaMo/localcolabfold
 cd localcolabfold
 bash install_colabbatch_linux.sh     # creates ./colabfold-conda with colabfold_batch
@@ -64,9 +67,9 @@ bash install_colabbatch_linux.sh     # creates ./colabfold-conda with colabfold_
 
 
 # tell the  scorer to use this binary
-export TOXDL2_COLABFOLD_BIN="$PWD/localcolabfold/localcolabfold/colabfold-conda/bin/colabfold_batch"
+export TOXDL2_COLABFOLD_BIN="$BASE/localcolabfold/localcolabfold/colabfold-conda/bin/colabfold_batch"
 
-cd $PWD/plm-toxicity #finish on main dir
+cd $BASE/plm-toxicity #finish on main dir
 
 
 
