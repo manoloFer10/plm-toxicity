@@ -3,6 +3,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, GenerationConfig
 from tqdm import tqdm
 from torch import Tensor
 from jaxtyping import Int, Float
+from utils.extract_activations import add_hooks
 
 
 class gPLM(ABC):
@@ -64,7 +65,7 @@ class gPLM(ABC):
     def _get_act_add_mod_fn(self, direction: Float[Tensor, "d_model"], coeff: float, layer: int):
         pass
     
-    def generate_de_novo(self, dataset: list[str], batch_size=8, max_new_tokens=100):
+    def generate_de_novo(self, dataset: list[str], batch_size=8, max_new_tokens=100, fwd_pre_hooks=[], fwd_hooks=[]):
         generation_config = GenerationConfig(max_new_tokens=max_new_tokens, 
                                              do_sample=True,
                                              repetition_penalty=1.2,
@@ -84,12 +85,12 @@ class gPLM(ABC):
                                             padding=True,
                                             truncation=False,
                                             return_tensors="pt")
-
-            generation_toks = self.model.generate(
-                input_ids=tokenized_sequences.input_ids.to(self.model.device),
-                attention_mask=tokenized_sequences.attention_mask.to(self.model.device),
-                generation_config=generation_config,
-            )
+            with add_hooks(module_forward_pre_hooks=fwd_pre_hooks, module_forward_hooks=fwd_hooks):
+                generation_toks = self.model.generate(
+                    input_ids=tokenized_sequences.input_ids.to(self.model.device),
+                    attention_mask=tokenized_sequences.attention_mask.to(self.model.device),
+                    generation_config=generation_config,
+                )
 
             generation_toks = generation_toks[:, tokenized_sequences.input_ids.shape[-1]:]
 
