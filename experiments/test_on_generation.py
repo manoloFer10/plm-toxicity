@@ -4,6 +4,7 @@ import pandas as pd
 from utils.scoring import score_toxicity, calculatePerplexity
 from utils.models.protgpt2 import clean_protgpt2_generation
 from tqdm import tqdm
+import gc
 
 def get_most_viable(model, sequences, top_k=100, batch_size = 8):
     
@@ -38,6 +39,9 @@ def get_toxicity_scores(model, n_samples=1000, top_k=100, batch_size =8, samplin
     generated_sequences = model.generate_de_novo(prompts, batch_size=batch_size, max_new_tokens=240)
 
     most_viable, ppls = get_most_viable(model, generated_sequences, top_k, batch_size=32)
+
+    del generated_sequences
+    gc.collect()
 
     most_viable = [clean_protgpt2_generation(seq) for seq in most_viable] # clean special tokens and endlines
 
