@@ -4,6 +4,7 @@ from utils.toxic_scorers.toxDL2.model import (
     load_ToxDL2_model, load_domain2vector,
     esm_embed_sequence, parse_calpha_coords, edges_from_coords
 )
+from concurrent.futures import ThreadPoolExecutor
 from utils.toxic_scorers.toxDL2.utils import pfam_domains, get_af2_structure_single
 from pathlib import Path
 from torch_geometric.data import Data
@@ -189,6 +190,56 @@ class ToxDL2Scorer():
             "mean_plddt": float(reported_plddt),
         }
     
+
+    def score_batch(self, seqs: list[str]) -> list[dict]:
+        if not seqs:
+            return []
+
+        with ThreadPoolExecutor() as ex:
+            prepared = list(ex.map(self._prepare, seqs))
+
+        graphs = []
+        windows = []
+        window_plddts = []
+        for seq, coords, plddt_per_res, token_reps, dom_vec in prepared:
+            w = [(0, len(seq))]
+            graphs.extend(self._make_window_graphs(coords, token_reps, dom_vec, w))
+            windows.append(w[0])
+            window_plddts.append(float(np.nanmean(plddt_per_res)))
+
+        probs = []
+        self.model.eval()
+        with torch.no_grad():
+            loader = DataLoader(graphs, batch_size=len(graphs), shuffle=False)
+            for batch in loader:
+                batch = batch.to(self.device)
+                out = self.model(batch)
+                probs.extend(out.view(-1).detach().cpu().tolist())
+
+        results = []
+        combine_fn = self._get_combination_fn("max_window")
+        for prob, w, plddt in zip(probs, windows, window_plddts):
+            probs_arr = np.array([prob], dtype=float)
+            w_plddts = np.array([plddt], dtype=float)
+            passing = np.where(w_plddts >= PLDDT_MIN)[0]
+            if passing.size == 0:
+                passing = np.array([0])
+            tox_p, chosen_idx, reported_plddt = combine_fn(
+                windows=[w],
+                probs=probs_arr,
+                w_plddts=w_plddts,
+                idxs=passing,
+            )
+            results.append({
+                "tox_prob": float(tox_p),
+                "non_tox_prob": float(1.0 - tox_p),
+                "best_window": w,
+                "mean_plddt": float(reported_plddt),
+            })
+
+        return results
+
+
     # scoring for a <=50 aa sequence
     # def _score_window(self, sequence):
 
@@ -257,14 +308,19 @@ class ToxDL2Scorer():
 TOXIC_SCORER= ToxDL2Scorer() # if we make an ensemble, change this line.
 
 
-def score_toxicity(sequences):
+def score_toxicity(sequences, batch_size: int = 1):
     '''
-    Estimates the toxicity of a set of aa sequences by averaging the toxicity probabilities for each.
+    Scores the toxicity of a set of aa sequences.
     '''
 
-    results = [TOXIC_SCORER.score(seq) for seq in tqdm(sequences, total=len(sequences), desc= 'Scoring toxicity')]
-    toxic_probs = [r["tox_prob"] for r in results]
-    non_toxic_probs = [r["non_tox_prob"] for r in results]
+    toxic_probs = []
+    non_toxic_probs = []
+    total = math.ceil(len(sequences) / batch_size)
+    for i in tqdm(range(0, len(sequences), batch_size), total=total, desc='Scoring toxicity'):
+        batch = sequences[i:i + batch_size]
+        results = TOXIC_SCORER.score_batch(batch)
+        toxic_probs.extend(r["tox_prob"] for r in results)
+        non_toxic_probs.extend(r["non_tox_prob"] for r in results)
     return toxic_probs, non_toxic_probs
 
 
