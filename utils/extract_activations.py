@@ -6,6 +6,8 @@ from tqdm import tqdm
 from typing import List, Callable, Tuple
 import os
 
+# =============== HOOKS ===============
+
 @contextlib.contextmanager
 def add_hooks(
     module_forward_pre_hooks: List[Tuple[torch.nn.Module, Callable]],
@@ -36,6 +38,68 @@ def add_hooks(
     finally:
         for h in handles:
             h.remove()
+
+
+def get_direction_ablation_input_pre_hook(direction):
+    def hook_fn(module, input):
+        nonlocal direction
+
+        if isinstance(input, tuple):
+            activation = input[0] # : Float[Tensor, "batch_size seq_len d_model"]
+        else:
+            activation = input # : Float[Tensor, "batch_size seq_len d_model"]
+
+        direction = direction / (direction.norm(dim=-1, keepdim=True) + 1e-8) #normalize
+        direction = direction.to(activation) 
+        activation -= (activation @ direction).unsqueeze(-1) * direction 
+
+        if isinstance(input, tuple):
+            return (activation, *input[1:])
+        else:
+            return activation
+    return hook_fn
+
+def get_direction_ablation_output_hook(direction):
+    def hook_fn(module, input, output):
+        nonlocal direction
+
+        if isinstance(output, tuple):
+            activation = output[0] # : Float[Tensor, "batch_size seq_len d_model"]
+        else:
+            activation = output #: Float[Tensor, "batch_size seq_len d_model"]
+
+        direction = direction / (direction.norm(dim=-1, keepdim=True) + 1e-8)
+        direction = direction.to(activation)
+        activation -= (activation @ direction).unsqueeze(-1) * direction 
+
+        if isinstance(output, tuple):
+            return (activation, *output[1:])
+        else:
+            return activation
+
+    return hook_fn
+
+
+def get_activation_addition_input_pre_hook(vector, coeff):
+    def hook_fn(module, input):
+        nonlocal vector
+
+        if isinstance(input, tuple):
+            activation = input[0] #: Float[Tensor, "batch_size seq_len d_model"]
+        else:
+            activation = input #: Float[Tensor, "batch_size seq_len d_model"]
+
+        vector = vector.to(activation)
+        activation += coeff * vector
+
+        if isinstance(input, tuple):
+            return (activation, *input[1:])
+        else:
+            return activation
+    return hook_fn
+
+
+# =============== EXTRACTION ===============
 
 
 def get_activations(model, tokenizer, instructions, block_modules: List[torch.nn.Module], store_means=True, batch_size=8, positions=[-1]):
