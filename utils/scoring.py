@@ -1,3 +1,4 @@
+import gc
 import torch, math, warnings, time
 import numpy as np
 from utils.toxic_scorers.toxDL2.model import (
@@ -209,6 +210,10 @@ class ToxDL2Scorer():
             graphs.extend(self._make_window_graphs(coords, token_reps, dom_vec, w))
             windows.append(w[0])
             window_plddts.append(float(np.nanmean(plddt_per_res)))
+
+        del prepared
+        gc.collect()
+        torch.cuda.empty_cache()
 
         probs = []
         self.model.eval()

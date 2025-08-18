@@ -1,5 +1,6 @@
 
 import math
+import torch
 import pandas as pd
 from utils.scoring import score_toxicity, calculatePerplexity
 from utils.models.protgpt2 import clean_protgpt2_generation
@@ -11,15 +12,28 @@ def get_most_viable(model, sequences, top_k=100, batch_size = 8):
     tokenizer_fn = model.tokenize_instructions_fn
     
     scored = []
-    for i in range(0, len(sequences), batch_size):
-        batch_sequences = sequences[i:i + batch_size]
+    batch_sequences = []
+    for seq in sequences:
+        batch_sequences.append(seq)
+        if len(batch_sequences) == batch_size:
+            ppls = calculatePerplexity(batch_sequences, model, tokenizer_fn)
+            ppls = ppls.tolist() if hasattr(ppls, "tolist") else list(ppls)
+            for s, ppl in zip(batch_sequences, ppls):
+                scored.append((s, float(ppl)))
+                scored.sort(key=lambda x: x[1])
+                if len(scored) > top_k:
+                    scored.pop()
+            batch_sequences = []
+
+    if batch_sequences:
         ppls = calculatePerplexity(batch_sequences, model, tokenizer_fn)
         ppls = ppls.tolist() if hasattr(ppls, "tolist") else list(ppls)
-        for seq, ppl in zip(batch_sequences, ppls):
-           scored.append((seq, float(ppl)))
+        for s, ppl in zip(batch_sequences, ppls):
+            scored.append((s, float(ppl)))
+            scored.sort(key=lambda x: x[1])
+            if len(scored) > top_k:
+                scored.pop()
 
-    scored.sort(key=lambda x: x[1])  # lowest perplexity first
-    scored = scored[:max(0, top_k)]
     sequences = [s for s, _ in scored]
     ppls = [p for _, p in scored]
     return sequences, ppls
@@ -39,9 +53,6 @@ def get_toxicity_scores(model, n_samples=1000, top_k=100, batch_size =8, samplin
     generated_sequences = model.generate_de_novo(prompts, batch_size=batch_size, max_new_tokens=240)
 
     most_viable, ppls = get_most_viable(model, generated_sequences, top_k, batch_size=32)
-
-    del generated_sequences
-    gc.collect()
 
     most_viable = [clean_protgpt2_generation(seq) for seq in most_viable] # clean special tokens and endlines
 
