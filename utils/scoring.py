@@ -4,7 +4,7 @@ from utils.toxic_scorers.toxDL2.model import (
     load_ToxDL2_model, load_domain2vector,
     esm_embed_sequence, parse_calpha_coords, edges_from_coords
 )
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from utils.toxic_scorers.toxDL2.utils import pfam_domains, get_af2_structure_single
 from pathlib import Path
 from torch_geometric.data import Data
@@ -191,12 +191,15 @@ class ToxDL2Scorer():
         }
     
 
-    def score_batch(self, seqs: list[str]) -> list[dict]:
+    def score_batch(self, seqs: list[str], max_workers=3) -> list[dict]:
         if not seqs:
             return []
-
-        with ThreadPoolExecutor() as ex:
-            prepared = list(ex.map(self._prepare, seqs))
+        
+        prepared = []
+        with ThreadPoolExecutor(max_workers=max_workers) as ex: 
+            futures = [ex.submit(self._prepare, seq) for seq in seqs]
+            for f in tqdm(as_completed(futures), total=len(futures), desc="Preparing sequences"):
+                prepared.append(f.result())
 
         graphs = []
         windows = []
