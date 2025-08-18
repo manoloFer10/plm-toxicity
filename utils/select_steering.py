@@ -1,21 +1,44 @@
 import os
 import torch
 import json
-import functools
+import math
+import gc
+import pandas as pd
 from tqdm import tqdm
+from utils.models.gPLM import gPLM
 from utils.scoring import score_toxicity, calculatePerplexity
-from utils.extract_activations import add_hooks
+from utils.models.protgpt2 import clean_protgpt2_generation
+from utils.extract_activations import (
+    add_hooks, get_activation_addition_input_pre_hook, 
+    get_direction_ablation_input_pre_hook, 
+    get_direction_ablation_output_hook
+    )
+from utils.visualizations import plot_tox_scores
 
-def get_most_viable(model, sequences, top_k=100):
+
+def get_most_viable(model, sequences, top_k=100, batch_size = 8):
+    '''
+    Given a model and a set of generated sequences, returns the top-k with lowest perplexity.
+    '''
     
     tokenizer_fn = model.tokenize_instructions_fn
+    
+    scored = []
+    for i in range(0, len(sequences), batch_size):
+        batch_sequences = sequences[i:i + batch_size]
+        ppls = calculatePerplexity(batch_sequences, model, tokenizer_fn)
+        ppls = ppls.tolist() if hasattr(ppls, "tolist") else list(ppls)
+        for seq, ppl in zip(batch_sequences, ppls):
+           scored.append((seq, float(ppl)))
 
-    scored = [(s, float(calculatePerplexity(s, model, tokenizer_fn))) for s in sequences]
     scored.sort(key=lambda x: x[1])  # lowest perplexity first
-    return scored[:max(0, top_k)]
+    scored = scored[:max(0, top_k)]
+    sequences = [s for s, _ in scored]
+    ppls = [p for _, p in scored]
+    return sequences, ppls
 
 
-def get_toxicity_scores(model, n_samples=1000, top_k=100, batch_size =8, sampling_seed = 'M'):
+def get_toxicity_scores(model, n_samples=1000, top_k=100, batch_size =8, sampling_seed = 'M', artifact_path='generations', setting='default', fwd_pre_hooks=[], fwd_hooks=[]):
     '''
     Given a model and an initiator sequence (ej: "M" ), samples generation from the model, filters by the top-k
     sequences that are more biologically plausible and scores the probability of being toxic. 
@@ -23,29 +46,67 @@ def get_toxicity_scores(model, n_samples=1000, top_k=100, batch_size =8, samplin
 
     prompts = [
         sampling_seed
-        for _ in n_samples
+        for _ in range(n_samples)
     ]
 
-    generated_sequences = model.generate_completions(prompts, batch_size=batch_size)
+    generated_sequences = model.generate_de_novo(prompts, batch_size=batch_size, max_new_tokens=240, fwd_pre_hooks=fwd_pre_hooks, fwd_hooks=fwd_hooks)
 
-    most_viable = get_most_viable(generated_sequences, top_k)
+    most_viable, ppls = get_most_viable(model, generated_sequences, top_k, batch_size=batch_size)
 
-    toxic_prob, non_toxic_prob = score_toxicity(most_viable) 
+    del generated_sequences
+    gc.collect()
 
-    # TODO combine somehow these scores
+    most_viable = [clean_protgpt2_generation(seq) for seq in most_viable] # clean special tokens and endlines
 
-    return refusal_scores
+    toxic_prob, non_toxic_prob = score_toxicity(most_viable, batch_size=8) 
+    df = pd.DataFrame(
+            zip(most_viable, toxic_prob, non_toxic_prob, ppls),
+            columns=["sequence", "tox_score", "non_tox score", "ppl"],
+        )
+    os.makedirs(artifact_path, exist_ok=True)
+    df.to_csv(os.path.join(artifact_path, f"{setting}.csv"), index=False)
+
+    avg_toxic_prob = sum(toxic_prob) / len(toxic_prob) if toxic_prob else 0
+    weights = [math.exp(-p) for p in ppls]
+    total_w = sum(weights)
+    weights = [w / total_w for w in weights]
+    weighted_toxic_prob = sum(tp * w for tp, w in zip(toxic_prob, weights))
+
+    print(f'For {setting} got: \n Average Toxicity: {avg_toxic_prob}, Weighted Toxicity: {weighted_toxic_prob}')
+    return avg_toxic_prob
+
+
+def get_last_position_logits(model, instructions, tokenize_instructions_fn, fwd_pre_hooks=[], fwd_hooks=[], batch_size=32):
+    last_position_logits = None
+
+    for i in range(0, len(instructions), batch_size):
+        tokenized_instructions = tokenize_instructions_fn(instructions=instructions[i:i+batch_size])
+
+        with add_hooks(module_forward_pre_hooks=fwd_pre_hooks, module_forward_hooks=fwd_hooks):
+            logits = model(
+                input_ids=tokenized_instructions.input_ids.to(model.device),
+                attention_mask=tokenized_instructions.attention_mask.to(model.device),
+            ).logits
+
+        if last_position_logits is None:
+            last_position_logits = logits[:, -1, :]
+        else:
+            last_position_logits = torch.cat((last_position_logits, logits[:, -1, :]), dim=0)
+
+    return last_position_logits # -> Float[Tensor, "n_instructions d_vocab"]
 
 
 def select_direction(
-    model,
-    tokenizer,
-    harmful_instructions,
-    harmless_instructions,
+    model: gPLM,
+    non_tox_val_sequences, #fetch these from not used protein sets.
     candidate_directions,
     artifact_dir,
-    kl_threshold=0.1, # directions larger KL score are filtered out
-    induce_refusal_threshold=0.0, # directions with a lower inducing refusal score are filtered out
+    n_samples:int = 1000,
+    top_k:int = 100,
+    kl_threshold:float = 0.1, # directions larger KL score are filtered out
+
+    induce_refusal_threshold=0.0, # directions with a lower inducing refusal score are filtered out MANU: what to do with this
+
     prune_layer_percentage=0.2, # discard the directions extracted from the last 20% of the model
     batch_size=32
 ):
@@ -54,17 +115,16 @@ def select_direction(
 
     n_pos, n_layer, d_model = candidate_directions.shape
 
-    baseline_toxicity_scores = get_refusal_scores(model, harmful_instructions, fwd_hooks=[], batch_size=batch_size)
-    baseline_refusal_scores_harmless = get_refusal_scores(model, harmless_instructions, tokenizer,  fwd_hooks=[], batch_size=batch_size)
+
+    baseline_tox_score = get_toxicity_scores(model, n_samples, top_k=top_k, artifact_path=artifact_dir, batch_size=batch_size, setting='baseline')
 
     ablation_kl_div_scores = torch.zeros((n_pos, n_layer), device=model.device, dtype=torch.float64)
-    ablation_refusal_scores = torch.zeros((n_pos, n_layer), device=model.device, dtype=torch.float64)
-    steering_refusal_scores = torch.zeros((n_pos, n_layer), device=model.device, dtype=torch.float64)
+    ablation_tox_scores = torch.zeros((n_pos, n_layer), device=model.device, dtype=torch.float64)
+    steering_tox_scores = torch.zeros((n_pos, n_layer), device=model.device, dtype=torch.float64)
 
-    baseline_harmless_logits = get_last_position_logits(
-        model=model,
-        tokenizer=tokenizer,
-        instructions=harmless_instructions,
+    baseline_non_tox_logits = get_last_position_logits(
+        model=model.model,
+        instructions=non_tox_val_sequences,
         fwd_pre_hooks=[],
         fwd_hooks=[],
         batch_size=batch_size
@@ -74,71 +134,71 @@ def select_direction(
         for source_layer in tqdm(range(n_layer), desc=f"Computing KL for source position {source_pos}"):
 
             ablation_dir = candidate_directions[source_pos, source_layer]
-            fwd_pre_hooks = [(model_block_modules[layer], get_direction_ablation_input_pre_hook(direction=ablation_dir)) for layer in range(model.config.num_hidden_layers)]
-            fwd_hooks = [(model_attn_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.config.num_hidden_layers)]
-            fwd_hooks += [(model_mlp_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.config.num_hidden_layers)]
+            fwd_pre_hooks = [(model.model_block_modules[layer], get_direction_ablation_input_pre_hook(direction=ablation_dir)) for layer in range(model.config.num_hidden_layers)]
+            fwd_hooks = [(model.model_attn_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.config.num_hidden_layers)]
+            fwd_hooks += [(model.model_mlp_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.config.num_hidden_layers)]
 
-            intervention_logits: Float[Tensor, "n_instructions 1 d_vocab"] = get_last_position_logits(
+            intervention_logits = get_last_position_logits(
                 model=model,
                 tokenizer=model.tokenizer,
-                instructions=harmless_instructions,
-                tokenize_instructions_fn=tokenizer,
+                instructions=non_tox_val_sequences,
+                tokenize_instructions_fn=model.tokenize_instructions_fn,
                 fwd_pre_hooks=fwd_pre_hooks,
                 fwd_hooks=fwd_hooks,
                 batch_size=batch_size
-            )
+            ) # : Float[Tensor, "n_instructions 1 d_vocab"]
 
-            ablation_kl_div_scores[source_pos, source_layer] = kl_div_fn(baseline_harmless_logits, intervention_logits, mask=None).mean(dim=0).item()
+            ablation_kl_div_scores[source_pos, source_layer] = kl_div_fn(baseline_non_tox_logits, intervention_logits).mean(dim=0).item()
 
     for source_pos in range(-n_pos, 0):
         for source_layer in tqdm(range(n_layer), desc=f"Computing refusal ablation for source position {source_pos}"):
 
             ablation_dir = candidate_directions[source_pos, source_layer]
-            fwd_pre_hooks = [(model_block_modules[layer], get_direction_ablation_input_pre_hook(direction=ablation_dir)) for layer in range(model.config.num_hidden_layers)]
-            fwd_hooks = [(model_attn_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.config.num_hidden_layers)]
-            fwd_hooks += [(model_mlp_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.config.num_hidden_layers)]
+            fwd_pre_hooks = [(model.model_block_modules[layer], get_direction_ablation_input_pre_hook(direction=ablation_dir)) for layer in range(model.config.num_hidden_layers)]
+            fwd_hooks = [(model.model_attn_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.config.num_hidden_layers)]
+            fwd_hooks += [(model.model_mlp_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.config.num_hidden_layers)]
 
-            refusal_scores = get_refusal_scores(model, harmful_instructions, tokenizer, model_base.refusal_toks, fwd_pre_hooks=fwd_pre_hooks, fwd_hooks=fwd_hooks, batch_size=batch_size)
-            ablation_refusal_scores[source_pos, source_layer] = refusal_scores.mean().item()
+            tox_scores = get_toxicity_scores(model, n_samples, top_k=top_k, batch_size=batch_size, artifact_path=artifact_dir, setting= f'l{source_layer}_pos{n_pos}_toxicity_ablation', fwd_pre_hooks=fwd_pre_hooks, fwd_hooks=fwd_hooks)
+            ablation_tox_scores[source_pos, source_layer] = tox_scores
 
     for source_pos in range(-n_pos, 0):
         for source_layer in tqdm(range(n_layer), desc=f"Computing refusal addition for source position {source_pos}"):
 
-            refusal_vector = candidate_directions[source_pos, source_layer]
+            tox_vector = candidate_directions[source_pos, source_layer]
             coeff = torch.tensor(1.0)
 
-            fwd_pre_hooks = [(model_block_modules[source_layer], get_activation_addition_input_pre_hook(vector=refusal_vector, coeff=coeff))]
+            fwd_pre_hooks = [(model.model_block_modules[source_layer], get_activation_addition_input_pre_hook(vector=tox_vector, coeff=coeff))]
             fwd_hooks = []
 
-            refusal_scores = get_refusal_scores(model, harmless_instructions, tokenizer, model_base.refusal_toks, fwd_pre_hooks=fwd_pre_hooks, fwd_hooks=fwd_hooks, batch_size=batch_size)
-            steering_refusal_scores[source_pos, source_layer] = refusal_scores.mean().item()
+            refusal_scores = get_toxicity_scores(model, n_samples, top_k=top_k, batch_size=batch_size, artifact_path=artifact_dir, setting= f'l{source_layer}_pos{n_pos}_toxicity_addition', fwd_pre_hooks=fwd_pre_hooks, fwd_hooks=fwd_hooks)
+            steering_tox_scores[source_pos, source_layer] = refusal_scores
 
-    plot_refusal_scores(
-        refusal_scores=ablation_refusal_scores,
-        baseline_refusal_score=baseline_refusal_scores_harmful.mean().item(),
-        token_labels=model_base.tokenizer.batch_decode(model_base.eoi_toks),
-        title='Ablating direction on harmful instructions',
-        artifact_dir=artifact_dir,
-        artifact_name='ablation_scores'
-    )
+    try:
+        plot_tox_scores(
+            tox_scores=ablation_tox_scores,
+            baseline_tox_score=baseline_tox_score,
+            title='Ablating direction',
+            artifact_dir=artifact_dir,
+            artifact_name='ablation_scores'
+        )
 
-    plot_refusal_scores(
-        refusal_scores=steering_refusal_scores,
-        baseline_refusal_score=baseline_refusal_scores_harmless.mean().item(),
-        token_labels=model_base.tokenizer.batch_decode(model_base.eoi_toks),
-        title='Adding direction on harmless instructions',
-        artifact_dir=artifact_dir,
-        artifact_name='actadd_scores'
-    )
+        plot_tox_scores(
+            tox_scores=steering_tox_scores,
+            baseline_tox_score=baseline_tox_score,
+            title='Adding direction',
+            artifact_dir=artifact_dir,
+            artifact_name='actadd_scores'
+        )
 
-    plot_refusal_scores(
-        refusal_scores=ablation_kl_div_scores,
-        baseline_refusal_score=0.0,
-        token_labels=model_base.tokenizer.batch_decode(model_base.eoi_toks),
-        title='KL Divergence when ablating direction on harmless instructions',
-        artifact_dir=artifact_dir,
-        artifact_name='kl_div_scores'
-    )
+        plot_tox_scores(
+            tox_scores=ablation_kl_div_scores,
+            baseline_tox_score=0.0,
+            title='KL Divergence when ablating direction on non-toxic sequences',
+            artifact_dir=artifact_dir,
+            artifact_name='kl_div_scores'
+        )
+    except Exception as e: 
+        print(f'Error when creating figures: {e}')
 
     filtered_scores = []
     json_output_all_scores = []
@@ -150,13 +210,13 @@ def select_direction(
             json_output_all_scores.append({
                 'position': source_pos,
                 'layer': source_layer,
-                'refusal_score': ablation_refusal_scores[source_pos, source_layer].item(),
-                'steering_score': steering_refusal_scores[source_pos, source_layer].item(),
+                'refusal_score': ablation_tox_scores[source_pos, source_layer].item(),
+                'steering_score': steering_tox_scores[source_pos, source_layer].item(),
                 'kl_div_score': ablation_kl_div_scores[source_pos, source_layer].item()
             })
 
-            refusal_score = ablation_refusal_scores[source_pos, source_layer].item()
-            steering_score = steering_refusal_scores[source_pos, source_layer].item()
+            refusal_score = ablation_tox_scores[source_pos, source_layer].item()
+            steering_score = steering_tox_scores[source_pos, source_layer].item()
             kl_div_score = ablation_kl_div_scores[source_pos, source_layer].item()
 
             # we sort the directions in descending order (from highest to lowest score)
@@ -183,8 +243,8 @@ def select_direction(
             json_output_filtered_scores.append({
                 'position': source_pos,
                 'layer': source_layer,
-                'refusal_score': ablation_refusal_scores[source_pos, source_layer].item(),
-                'steering_score': steering_refusal_scores[source_pos, source_layer].item(),
+                'refusal_score': ablation_tox_scores[source_pos, source_layer].item(),
+                'steering_score': steering_tox_scores[source_pos, source_layer].item(),
                 'kl_div_score': ablation_kl_div_scores[source_pos, source_layer].item()
             })   
 
@@ -205,8 +265,8 @@ def select_direction(
     score, pos, layer = filtered_scores[0]
 
     print(f"Selected direction: position={pos}, layer={layer}")
-    print(f"Refusal score: {ablation_refusal_scores[pos, layer]:.4f} (baseline: {baseline_refusal_scores_harmful.mean().item():.4f})")
-    print(f"Steering score: {steering_refusal_scores[pos, layer]:.4f} (baseline: {baseline_refusal_scores_harmless.mean().item():.4f})")
+    print(f"Refusal score: {ablation_tox_scores[pos, layer]:.4f} (baseline: {baseline_refusal_scores_harmful.mean().item():.4f})")
+    print(f"Steering score: {steering_tox_scores[pos, layer]:.4f} (baseline: {baseline_refusal_scores_harmless.mean().item():.4f})")
     print(f"KL Divergence: {ablation_kl_div_scores[pos, layer]:.4f}")
     
     return pos, layer, candidate_directions[pos, layer]
@@ -232,3 +292,23 @@ def select_and_save_direction(cfg, model_base, harmful_val, harmless_val, candid
     torch.save(direction, f'{cfg.artifact_path()}/direction.pt')
 
     return pos, layer, direction
+
+
+def kl_div_fn(
+    logits_a, #: Float[Tensor, 'batch seq_pos d_vocab']
+    logits_b, #: Float[Tensor, 'batch seq_pos d_vocab']
+    epsilon #: Float=1e-6
+): # -> Float[Tensor, 'batch']
+    """
+    Compute the KL divergence loss between two tensors of logits.
+    """
+    logits_a = logits_a.to(torch.float64)
+    logits_b = logits_b.to(torch.float64)
+
+    probs_a = logits_a.softmax(dim=-1)
+    probs_b = logits_b.softmax(dim=-1)
+
+    kl_divs = torch.sum(probs_a * (torch.log(probs_a + epsilon) - torch.log(probs_b + epsilon)), dim=-1)
+
+    return torch.mean(kl_divs, dim=-1)
+    
