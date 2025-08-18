@@ -1,5 +1,7 @@
 set -euo pipefail                       # fail fast & catch unset vars
 
+PWD=$(pwd)
+
 echo "🔥  Installing Miniconda …"
 
 # ── 1. pick a valid installer (use 'latest' unless you need a frozen build)
@@ -7,16 +9,16 @@ MINI=Miniconda3-latest-Linux-x86_64.sh        # ← exists in the archive
 
 wget -q https://repo.anaconda.com/miniconda/$MINI
 chmod +x $MINI
-./$MINI -b -p "$HOME/miniconda3"
+./$MINI -b -p "$PWD/miniconda3"
 rm $MINI
 echo "✅  Conda installed."
 
 # ── 2. make conda available in this shell
 if ! grep -q 'miniconda3/etc/profile.d/conda.sh' ~/.bashrc; then
-  echo '. "$HOME/miniconda3/etc/profile.d/conda.sh"' >> ~/.bashrc
+  echo '. "$PWD/miniconda3/etc/profile.d/conda.sh"' >> ~/.bashrc
 fi
 set +u
-source "$HOME/miniconda3/etc/profile.d/conda.sh"
+source "$PWD/miniconda3/etc/profile.d/conda.sh"
 set -u
 
 # accept ToS (ok with -u off or on now)
@@ -49,23 +51,22 @@ hmmpress Pfam-A.hmm
 #  make it discoverable 
 echo 'export PFAM_DB_DIR="$HOME/db/pfam"' >> ~/.bashrc
 
+# make sure to use the conda env library path
+export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:$LD_LIBRARY_PATH"
+
 echo "LocalColabFold..."
 
-cd $HOME
+cd $PWD
 git clone https://github.com/YoshitakaMo/localcolabfold
 cd localcolabfold
 bash install_colabbatch_linux.sh     # creates ./colabfold-conda with colabfold_batch
 
-conda activate /root/localcolabfold/localcolabfold/colabfold-conda
 
-export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:$LD_LIBRARY_PATH"
 
 # tell the  scorer to use this binary
-export TOXDL2_COLABFOLD_BIN="$HOME/localcolabfold/localcolabfold/colabfold-conda/bin/colabfold_batch"
+export TOXDL2_COLABFOLD_BIN="$PWD/localcolabfold/localcolabfold/colabfold-conda/bin/colabfold_batch"
 
-conda deactivate
-
-cd $HOME/plm-toxicity #finish on main dir
+cd $PWD/plm-toxicity #finish on main dir
 
 
 
