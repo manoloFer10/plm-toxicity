@@ -158,8 +158,8 @@ def get_activations(model, tokenizer, instructions, block_modules: List[torch.nn
               )
 
 
-    # of size (n_positions, n_layers, d_model) if store_means = False
-    # of size (n_samples, n_positions, n_layers, d_model) if store_means = True
+    # of size (n_samples, n_positions, n_layers, d_model) if store_means = False
+    # of size (n_positions, n_layers, d_model) if store_means = True
     return activations
 
 def get_activations_for_datasets(model, tokenizer, tox_seqs, non_tox_seqs, block_modules: List[torch.nn.Module], batch_size=32, positions=[-1]):
