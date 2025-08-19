@@ -344,12 +344,19 @@ def get_af2_structure_batch(
         out_dir = td / name
         pdb_path = None
         for pat in best_candidates:
-            hits = sorted(out_dir.glob(pat))
+            # Search for files in the temp directory matching the sequence prefix
+            pattern = f"{name}{pat}" if pat.startswith("*") else f"{name}*{pat}"
+            hits = sorted(td.glob(pattern))
+            # if not hits:
+            #     # Fall back to legacy per-sequence subdirectory
+            #     hits = sorted((td / name).glob(pat))
             if hits:
                 pdb_path = hits[0]
                 break
         if pdb_path is None:
-            raise RuntimeError(f"AF2 produced no PDB for sequence {name}")
+            raise RuntimeError(
+                f"AF2 produced no PDB for sequence {name} (looked for patterns {best_candidates})"
+            )
         plddt = _plddt_per_residue(pdb_path)
         results.append((pdb_path, plddt))
 
