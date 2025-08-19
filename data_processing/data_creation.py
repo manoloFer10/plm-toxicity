@@ -5,9 +5,6 @@ from data_processing.cd_hit import map_sequences_to_cdhit_clusters, pick_cluster
 
 UNIPROT_CURATED = load_dataset('manufernandezbur/uniprot2025_03')['train']
 
-def add_eos(example):
-        example['Sequence'] =  '<|endoftext|>' + example['Sequence'] + '<|endoftext|>'
-        return example
 
 def get_splits(data):
         
