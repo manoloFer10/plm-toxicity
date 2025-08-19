@@ -118,6 +118,8 @@ def pfam_domains_parallel(
             idx = futures[fut]
             results[idx] = fut.result()
 
+    return results
+
 
 def _sha16(seq: str) -> str:
     return hashlib.sha256(seq.upper().encode("utf-8")).hexdigest()[:16]
