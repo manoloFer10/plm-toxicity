@@ -106,14 +106,14 @@ def get_activations(model, tokenizer, instructions, block_modules: List[torch.nn
 
     def mean_hook(layer, cache, n_samples, positions):
         def _hook(module, inputs):
-            act = inputs[0][:, positions, :].to(cache)          # [B, P, d]
+            act = inputs[0][:, positions, :].to(cache)          # [P, L, d] B=batch, P= positions, d= model_dim, L=layer
             cache[:, layer] += act.sum(0) / n_samples # mean update
         return _hook
 
 
     def sample_hook(layer, cache, positions, batch_start):
         def _hook(module, inputs):
-            act = inputs[0][:, positions, :].to(cache)             # [B, P, d]
+            act = inputs[0][:, positions, :].to(cache)             # [B, P, L, d] 
             B = act.size(0)
             cache[batch_start:batch_start+B, :, layer, :] = act
         return _hook
@@ -170,7 +170,7 @@ def get_activations_for_datasets(model, tokenizer, tox_seqs, non_tox_seqs, block
     return activations_tox, activations_non_tox
 
 
-def get_mean_diff(model, tokenizer, tox_seqs, non_tox_seqs, block_modules: List[torch.nn.Module], batch_size=32, positions=[-1]):
+def get_mean_diff(model, tokenizer, tox_seqs, non_tox_seqs, block_modules: List[torch.nn.Module], batch_size=64, positions=[-1]):
     activations_tox = get_activations(model, tokenizer, tox_seqs, block_modules, batch_size=batch_size, positions=positions, store_means=True)
     activations_non_tox = get_activations(model, tokenizer, non_tox_seqs, block_modules, batch_size=batch_size, positions=positions, store_means=True)
 
@@ -187,6 +187,6 @@ def generate_directions(model, tokenizer, block_modules, tox_seqs, non_tox_seqs,
 
     assert not mean_diffs.isnan().any()
 
-    torch.save(mean_diffs, f"{artifact_dir}/preliminary_exps/mean_diffs.pt")
+    torch.save(mean_diffs, f"{artifact_dir}/mean_diffs.pt")
 
     return mean_diffs
