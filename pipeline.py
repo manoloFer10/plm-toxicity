@@ -1,0 +1,49 @@
+import os
+from datasets import load_dataset
+from utils.models.protgpt2 import ProtGPT2
+from utils.extract_activations import generate_directions
+from utils.select_steering import select_and_save_direction
+
+def get_model():
+    return ProtGPT2("nferruz/ProtGPT2")
+
+def get_activation_extraction_data():
+    data = load_dataset('manufernandezbur/balanced_toxfeatures')['train']
+    tox = data.filter(lambda x: x['Toxin'])
+    non_tox = data.filter(lambda x: not x['Toxin'])
+
+    return tox, non_tox
+
+def main():
+
+    n_samples = 1000
+    top_k=100
+    batch_size=128
+
+
+    artifact_dir = 'activations'
+    os.makedirs(artifact_dir, exist_ok=True)
+
+    model = get_model()
+    tox, non_tox = get_activation_extraction_data()
+    val_non_tox = get_val_non_tox()
+
+    mean_diffs = generate_directions(model.model, model.tokenizer, model.model_block_modules, tox['sequence'], non_tox['sequence'], artifact_dir)
+
+
+    pos, layer, direction = select_and_save_direction(
+                                        artifact_dir=artifact_dir,
+                                        model_base=model,
+                                        non_tox_val_sequences=val_non_tox,
+                                        candidate_directions=mean_diffs,
+                                        n_samples=n_samples,
+                                        top_k=top_k,
+                                        batch_size=batch_size
+                                    )
+    
+    print(f'Successfully extracted direction : {direction=}')
+
+
+
+if __name__ =='__main__':
+    main()
