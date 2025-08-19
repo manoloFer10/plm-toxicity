@@ -17,26 +17,51 @@ from utils.visualizations import plot_tox_scores
 
 
 def get_most_viable(model, sequences, top_k=100, batch_size = 8):
-    '''
-    Given a model and a set of generated sequences, returns the top-k with lowest perplexity.
-    '''
     
     tokenizer_fn = model.tokenize_instructions_fn
     
     scored = []
-    for i in range(0, len(sequences), batch_size):
-        batch_sequences = sequences[i:i + batch_size]
+    batch_sequences = []
+    for seq in sequences:
+        batch_sequences.append(seq)
+        if len(batch_sequences) == batch_size:
+            ppls = calculatePerplexity(batch_sequences, model, tokenizer_fn)
+            ppls = ppls.tolist() if hasattr(ppls, "tolist") else list(ppls)
+            for s, ppl in zip(batch_sequences, ppls):
+                scored.append((s, float(ppl)))
+                scored.sort(key=lambda x: x[1])
+                if len(scored) > top_k:
+                    scored.pop()
+            batch_sequences = []
+
+    if batch_sequences:
         ppls = calculatePerplexity(batch_sequences, model, tokenizer_fn)
         ppls = ppls.tolist() if hasattr(ppls, "tolist") else list(ppls)
-        for seq, ppl in zip(batch_sequences, ppls):
-           scored.append((seq, float(ppl)))
+        for s, ppl in zip(batch_sequences, ppls):
+            scored.append((s, float(ppl)))
+            scored.sort(key=lambda x: x[1])
+            if len(scored) > top_k:
+                scored.pop()
 
-    scored.sort(key=lambda x: x[1])  # lowest perplexity first
-    scored = scored[:max(0, top_k)]
     sequences = [s for s, _ in scored]
     ppls = [p for _, p in scored]
     return sequences, ppls
 
+def sampling_pipeline(model, batch_size, n_samples=1000, top_k=100, max_new_tokens=200, sampling_seed = 'M'):
+    prompts = [
+        sampling_seed
+        for _ in range(n_samples)
+    ]
+
+    generated_sequences = model.generate_de_novo(prompts, batch_size=batch_size, max_new_tokens=max_new_tokens) #ensure that sequences end
+
+    generated_sequences = [seq for seq in generated_sequences if 15 < len(clean_protgpt2_generation(seq)) < 250] #limit the generated sequences for AF2 prediction (upper bound is for compute resource)
+
+    most_viable, ppls = get_most_viable(model, generated_sequences, top_k, batch_size=32) # get top_k with lowest ppl
+
+    most_viable = [clean_protgpt2_generation(seq) for seq in most_viable] # clean special tokens and endlines
+
+    return most_viable, ppls
 
 def get_toxicity_scores(model, n_samples=1000, top_k=100, batch_size =8, sampling_seed = 'M', artifact_path='generations', setting='default', fwd_pre_hooks=[], fwd_hooks=[]):
     '''
@@ -44,33 +69,16 @@ def get_toxicity_scores(model, n_samples=1000, top_k=100, batch_size =8, samplin
     sequences that are more biologically plausible and scores the probability of being toxic. 
     '''
 
-    prompts = [
-        sampling_seed
-        for _ in range(n_samples)
-    ]
+    most_viable, ppls = sampling_pipeline(model, batch_size=batch_size, n_samples=n_samples, top_k=top_k, sampling_seed=sampling_seed)
 
-    generated_sequences = model.generate_de_novo(prompts, batch_size=batch_size, max_new_tokens=240, fwd_pre_hooks=fwd_pre_hooks, fwd_hooks=fwd_hooks)
-
-    most_viable, ppls = get_most_viable(model, generated_sequences, top_k, batch_size=batch_size)
-
-    del generated_sequences
-    gc.collect()
-
-    most_viable = [clean_protgpt2_generation(seq) for seq in most_viable] # clean special tokens and endlines
-
-    toxic_prob, non_toxic_prob = score_toxicity(most_viable, batch_size=8) 
+    toxic_prob, non_toxic_prob = score_toxicity(most_viable, batch_size=50) 
     df = pd.DataFrame(
             zip(most_viable, toxic_prob, non_toxic_prob, ppls),
             columns=["sequence", "tox_score", "non_tox score", "ppl"],
         )
-    os.makedirs(artifact_path, exist_ok=True)
-    df.to_csv(os.path.join(artifact_path, f"{setting}.csv"), index=False)
+    df.to_csv("toxicity_scores.csv", index=False)
 
     avg_toxic_prob = sum(toxic_prob) / len(toxic_prob) if toxic_prob else 0
-    weights = [math.exp(-p) for p in ppls]
-    total_w = sum(weights)
-    weights = [w / total_w for w in weights]
-    weighted_toxic_prob = sum(tp * w for tp, w in zip(toxic_prob, weights))
 
     print(f'For {setting} got: \n Average Toxicity: {avg_toxic_prob}, Weighted Toxicity: {weighted_toxic_prob}')
     return avg_toxic_prob
