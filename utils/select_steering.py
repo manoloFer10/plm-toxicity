@@ -106,7 +106,7 @@ def get_last_position_logits(model, instructions, tokenize_instructions_fn, fwd_
 
 def select_direction(
     model: gPLM,
-    non_tox_val_sequences, #fetch these from not used protein sets.
+    kl_validation_samples, #fetch these from not used protein sets.
     candidate_directions,
     artifact_dir,
     n_samples:int = 1000,
@@ -134,7 +134,7 @@ def select_direction(
 
     baseline_non_tox_logits = get_last_position_logits(
         model=model.model,
-        instructions=non_tox_val_sequences,
+        instructions=kl_validation_samples,
         fwd_pre_hooks=[],
         fwd_hooks=[],
         batch_size=batch_size
@@ -151,7 +151,7 @@ def select_direction(
             intervention_logits = get_last_position_logits(
                 model=model,
                 tokenizer=model.tokenizer,
-                instructions=non_tox_val_sequences,
+                instructions=kl_validation_samples,
                 tokenize_instructions_fn=model.tokenize_instructions_fn,
                 fwd_pre_hooks=fwd_pre_hooks,
                 fwd_hooks=fwd_hooks,
@@ -280,14 +280,14 @@ def select_direction(
 
 
 
-def select_and_save_direction(artifact_dir, model_base, non_tox_val_sequences, candidate_directions, n_samples = 1000, top_k = 100, batch_size=128):
+def select_and_save_direction(artifact_dir, model_base, kl_validation_samples, candidate_directions, n_samples = 1000, top_k = 100, batch_size=128):
     """Select and save the direction."""
     if not os.path.exists(os.path.join(artifact_dir, 'select_direction')):
         os.makedirs(os.path.join(artifact_dir, 'select_direction'))
 
     pos, layer, direction = select_direction(
         model_base,
-        non_tox_val_sequences,
+        kl_validation_samples,
         candidate_directions,
         artifact_dir=os.path.join(artifact_dir, "select_direction"),
         n_samples = n_samples,
