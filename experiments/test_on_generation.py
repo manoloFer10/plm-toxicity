@@ -71,13 +71,13 @@ def get_toxicity_scores(model, n_samples=1000, top_k=100, batch_size =8, samplin
     df.to_csv("toxicity_scores.csv", index=False)
 
     avg_toxic_prob = sum(toxic_prob) / len(toxic_prob) if toxic_prob else 0
-    weights = [math.exp(-p) for p in ppls]
-    total_w = sum(weights)
-    weights = [w / total_w for w in weights]
-    weighted_toxic_prob = sum(tp * w for tp, w in zip(toxic_prob, weights))
+    # weights = [math.exp(-p) for p in ppls]
+    # total_w = sum(weights) + 1e-8
+    # weights = [w / total_w for w in weights]
+    # weighted_toxic_prob = sum(tp * w for tp, w in zip(toxic_prob, weights))
     
 
-    return avg_toxic_prob, weighted_toxic_prob
+    return avg_toxic_prob #weighted_toxic_prob
 
 
 def get_protgpt2():
