@@ -90,7 +90,8 @@ def get_last_position_logits(model, instructions, tokenize_instructions_fn, fwd_
     for i in range(0, len(instructions), batch_size):
         tokenized_instructions = tokenize_instructions_fn(instructions=instructions[i:i+batch_size])
 
-        with add_hooks(module_forward_pre_hooks=fwd_pre_hooks, module_forward_hooks=fwd_hooks):
+    with add_hooks(module_forward_pre_hooks=fwd_pre_hooks, module_forward_hooks=fwd_hooks):
+        with torch.no_grad():
             logits = model(
                 input_ids=tokenized_instructions.input_ids.to(model.device),
                 attention_mask=tokenized_instructions.attention_mask.to(model.device),
@@ -151,7 +152,6 @@ def select_direction(
 
             intervention_logits = get_last_position_logits(
                 model=model.model,
-                tokenizer=model.tokenizer,
                 instructions=kl_validation_samples,
                 tokenize_instructions_fn=model.tokenize_instructions_fn,
                 fwd_pre_hooks=fwd_pre_hooks,
@@ -169,7 +169,14 @@ def select_direction(
             fwd_hooks = [(model.model_attn_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.config.num_hidden_layers)]
             fwd_hooks += [(model.model_mlp_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.config.num_hidden_layers)]
 
-            tox_scores = get_toxicity_scores(model, n_samples, top_k=top_k, batch_size=batch_size, artifact_path=artifact_dir, setting= f'l{source_layer}_pos{n_pos}_toxicity_ablation', fwd_pre_hooks=fwd_pre_hooks, fwd_hooks=fwd_hooks)
+            tox_scores = get_toxicity_scores(model, 
+                                             n_samples, 
+                                             top_k=top_k, 
+                                             batch_size=batch_size, 
+                                             artifact_path=artifact_dir, 
+                                             setting= f'l{source_layer}_pos{n_pos}_toxicity_ablation', 
+                                             fwd_pre_hooks=fwd_pre_hooks, fwd_hooks=fwd_hooks
+            )
             ablation_tox_scores[source_pos, source_layer] = tox_scores
 
     for source_pos in range(-n_pos, 0):
@@ -181,7 +188,14 @@ def select_direction(
             fwd_pre_hooks = [(model.model_block_modules[source_layer], get_activation_addition_input_pre_hook(vector=tox_vector, coeff=coeff))]
             fwd_hooks = []
 
-            refusal_scores = get_toxicity_scores(model, n_samples, top_k=top_k, batch_size=batch_size, artifact_path=artifact_dir, setting= f'l{source_layer}_pos{n_pos}_toxicity_addition', fwd_pre_hooks=fwd_pre_hooks, fwd_hooks=fwd_hooks)
+            refusal_scores = get_toxicity_scores(model, 
+                                                 n_samples, 
+                                                 top_k=top_k, 
+                                                 batch_size=batch_size, 
+                                                 artifact_path=artifact_dir, 
+                                                 setting= f'l{source_layer}_pos{n_pos}_toxicity_addition', 
+                                                 fwd_pre_hooks=fwd_pre_hooks, 
+                                                 fwd_hooks=fwd_hooks)
             steering_tox_scores[source_pos, source_layer] = refusal_scores
 
     try:
@@ -318,7 +332,10 @@ def kl_div_fn(
     probs_a = logits_a.softmax(dim=-1)
     probs_b = logits_b.softmax(dim=-1)
 
-    kl_divs = torch.sum(probs_a * (torch.log(probs_a + epsilon) - torch.log(probs_b + epsilon)), dim=-1)
+    kl_divs = torch.sum(
+        probs_a * (torch.log(probs_a + epsilon) - torch.log(probs_b + epsilon)), 
+        dim=-1
+    )
 
     return torch.mean(kl_divs, dim=-1)
     
