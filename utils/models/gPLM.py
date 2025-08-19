@@ -95,7 +95,7 @@ class gPLM(ABC):
             generation_toks = generation_toks[:, tokenized_sequences.input_ids.shape[-1]:]
 
             for generation_idx, generation in enumerate(generation_toks):
-                generated = self.tokenizer.decode(generation, skip_special_tokens=False).strip()
+                generated = self.tokenizer.decode(generation, skip_special_tokens=skip_special_tokens).strip()
                 completions.append(
                     dataset[i + generation_idx] + generated #input sequence + generation
                 )
