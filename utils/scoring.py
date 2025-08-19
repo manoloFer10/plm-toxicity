@@ -9,7 +9,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from utils.toxic_scorers.toxDL2.utils import (
     pfam_domains,
     get_af2_structure_single,
-    get_af2_structure_batch
+    get_af2_structure_batch,
+    pfam_domains_parallel,
 )
 from pathlib import Path
 from torch_geometric.data import Data
@@ -73,8 +74,9 @@ class ToxDL2Scorer():
             skip_relax=True,
             verbosity=self.af2_verbosity,
         )
+        domain_lists = pfam_domains_parallel(seqs)
         prepared = []
-        for seq, (pdb_path, plddt_per_res) in zip(seqs, structures):
+        for seq, domains, (pdb_path, plddt_per_res) in zip(seqs, domain_lists, structures):
             pdb_seq, coords = parse_calpha_coords(pdb_path)
             L = min(len(seq), len(pdb_seq), coords.shape[0])
             if L < len(seq):

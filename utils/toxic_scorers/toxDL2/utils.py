@@ -74,6 +74,49 @@ def pfam_domains(sequence: str, pfam_db_dir: Path | None = None,
                 clean.append(d)
         return clean
     
+def pfam_domains_parallel(
+    sequences: List[str],
+    pfam_db_dir: Path | None = None,
+    use_ga: bool = True,
+    min_hmm_cov: float = 0.5,
+    max_workers: int | None = None,
+) -> List[List[str]]:
+    """Run :func:`pfam_domains` for multiple sequences in parallel.
+
+    Parameters
+    ----------
+    sequences:
+        List of protein sequences.
+    pfam_db_dir, use_ga, min_hmm_cov:
+        Passed through to :func:`pfam_domains`.
+    max_workers:
+        Max threads for the thread pool. ``None`` lets ``ThreadPoolExecutor`` decide.
+
+    Returns
+    -------
+    list[list[str]]
+        A list of domain lists matching the order of ``sequences``.
+    """
+    if not sequences:
+        return []
+
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    results: List[List[str]] = [[] for _ in sequences]
+    with ThreadPoolExecutor(max_workers=max_workers) as ex:
+        futures = {
+            ex.submit(
+                pfam_domains,
+                seq,
+                pfam_db_dir=pfam_db_dir,
+                use_ga=use_ga,
+                min_hmm_cov=min_hmm_cov,
+            ): i
+            for i, seq in enumerate(sequences)
+        }
+        for fut in as_completed(futures):
+            idx = futures[fut]
+            results[idx] = fut.result()
 
 
 def _sha16(seq: str) -> str:
