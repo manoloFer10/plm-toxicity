@@ -39,7 +39,7 @@ conda activate plmTox
 set -u
 
 # make sure to use the conda env library path
-export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:$LD_LIBRARY_PATH"
+echo 'export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:$LD_LIBRARY_PATH"' >> ~/.bashrc
 
 echo "Environment ready, dowloading final pkgs..."
 
@@ -68,7 +68,7 @@ bash install_colabbatch_linux.sh     # creates ./colabfold-conda with colabfold_
 
 
 # tell the  scorer to use this binary
-export TOXDL2_COLABFOLD_BIN="$BASE/localcolabfold/localcolabfold/colabfold-conda/bin/colabfold_batch"
+echo 'export TOXDL2_COLABFOLD_BIN="$BASE/localcolabfold/localcolabfold/colabfold-conda/bin/colabfold_batch"' >> ~/.bashrc
 
 cd $BASE/plm-toxicity #finish on main dir
 
