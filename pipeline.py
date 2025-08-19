@@ -13,7 +13,7 @@ def get_activation_extraction_data():
     tox = data.filter(lambda x: x['Toxin']).to_pandas()['Sequence']
     non_tox = data.filter(lambda x: not x['Toxin']).to_pandas()['Sequence']
 
-    return tox, non_tox
+    return list(tox), list(non_tox)
 
 def main():
 
