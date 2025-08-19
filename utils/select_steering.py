@@ -280,17 +280,19 @@ def select_direction(
 
 
 
-def select_and_save_direction(artifact_dir, model_base, non_tox_val_sequences, candidate_directions):
+def select_and_save_direction(artifact_dir, model_base, non_tox_val_sequences, candidate_directions, n_samples = 1000, top_k = 100, batch_size=128):
     """Select and save the direction."""
     if not os.path.exists(os.path.join(artifact_dir, 'select_direction')):
         os.makedirs(os.path.join(artifact_dir, 'select_direction'))
 
     pos, layer, direction = select_direction(
         model_base,
-        harmful_val,
-        harmless_val,
+        non_tox_val_sequences,
         candidate_directions,
-        artifact_dir=os.path.join(artifact_dir, "select_direction")
+        artifact_dir=os.path.join(artifact_dir, "select_direction"),
+        n_samples = n_samples,
+        top_k = top_k,
+        batch_size = batch_size
     )
 
     with open(f'{artifact_dir}/direction_metadata.json', "w") as f:
