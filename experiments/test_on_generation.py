@@ -63,7 +63,7 @@ def get_toxicity_scores(model, n_samples=1000, top_k=100, batch_size =8, samplin
 
     most_viable, ppls = sampling_pipeline(model, batch_size=batch_size, n_samples=n_samples, top_k=top_k, sampling_seed=sampling_seed)
 
-    toxic_prob, non_toxic_prob = score_toxicity(most_viable, batch_size=1) 
+    toxic_prob, non_toxic_prob = score_toxicity(most_viable, batch_size=2) 
     df = pd.DataFrame(
             zip(most_viable, toxic_prob, non_toxic_prob, ppls),
             columns=["sequence", "tox_score", "non_tox score", "ppl"],
