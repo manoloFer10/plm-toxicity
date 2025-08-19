@@ -6,7 +6,11 @@ from utils.toxic_scorers.toxDL2.model import (
     esm_embed_sequence, parse_calpha_coords, edges_from_coords
 )
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from utils.toxic_scorers.toxDL2.utils import pfam_domains, get_af2_structure_single
+from utils.toxic_scorers.toxDL2.utils import (
+    pfam_domains,
+    get_af2_structure_single,
+    get_af2_structure_batch
+)
 from pathlib import Path
 from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
@@ -56,6 +60,32 @@ class ToxDL2Scorer():
         domains = pfam_domains(seq)            # compute ONCE
         dom_vec = self._domain_vector(domains) # [1, 256]
         return seq, coords, np.asarray(plddt_per_res, float), token_reps, dom_vec
+    
+    def _prepare_batch(self, seqs: list[str]):
+        """Run AF2 once for all sequences and compute embeddings/domains."""
+        structures = get_af2_structure_batch(
+            seqs,
+            msa_mode="single_sequence",
+            num_recycles=0,
+            num_models=1,
+            num_seeds=1,
+            model_type="alphafold2_ptm",
+            skip_relax=True,
+            verbosity=self.af2_verbosity,
+        )
+        prepared = []
+        for seq, (pdb_path, plddt_per_res) in zip(seqs, structures):
+            pdb_seq, coords = parse_calpha_coords(pdb_path)
+            L = min(len(seq), len(pdb_seq), coords.shape[0])
+            if L < len(seq):
+                seq = seq[:L]
+                coords = coords[:L]
+                plddt_per_res = plddt_per_res[:L]
+            token_reps = esm_embed_sequence(seq)
+            domains = pfam_domains(seq)
+            dom_vec = self._domain_vector(domains)
+            prepared.append((seq, coords, np.asarray(plddt_per_res, float), token_reps, dom_vec))
+        return prepared
 
     def _domain_vector(self, domain_names):
         wv = self.domain2vector.wv
@@ -192,15 +222,11 @@ class ToxDL2Scorer():
         }
     
 
-    def score_batch(self, seqs: list[str], max_workers=2) -> list[dict]:
+    def score_batch(self, seqs: list[str]) -> list[dict]:
         if not seqs:
             return []
         
-        prepared = []
-        with ThreadPoolExecutor(max_workers=max_workers) as ex: 
-            futures = [ex.submit(self._prepare, seq) for seq in seqs]
-            for f in tqdm(as_completed(futures), total=len(futures), desc="Preparing sequences"):
-                prepared.append(f.result())
+        prepared = self._prepare_batch(seqs)
 
         graphs = []
         windows = []

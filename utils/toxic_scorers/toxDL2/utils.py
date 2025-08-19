@@ -281,3 +281,76 @@ def _plddt_per_residue(pdb_path: Path) -> list[float]:
                 except ValueError:
                     p.append(float("nan"))
     return p
+
+
+def get_af2_structure_batch(
+    sequences: List[str],
+    msa_mode: str = "single_sequence",
+    num_recycles: int = 0,
+    model_type: str | None = "alphafold2_ptm",
+    num_models: int = 1,
+    num_seeds: int = 1,
+    skip_relax: bool = True,
+    verbosity: str = "warn",
+) -> List[Tuple[Path, List[float]]]:
+    """Run ColabFold once for a batch of sequences.
+
+    Returns a list of (best_pdb_path, per_residue_plddt_list) matching the
+    order of ``sequences``.
+    """
+    if not sequences:
+        return []
+
+    td = Path(tempfile.mkdtemp())
+    fasta_path = td / "batch.fasta"
+    names = [f"q{i}" for i in range(len(sequences))]
+    with fasta_path.open("w") as f:
+        for name, seq in zip(names, sequences):
+            f.write(f">{name}\n{seq}\n")
+
+    colabfold_bin = os.environ.get("TOXDL2_COLABFOLD_BIN", "colabfold_batch")
+    cmd = [
+        colabfold_bin,
+        "--msa-mode",
+        msa_mode,
+        "--num-recycle",
+        str(num_recycles),
+        "--num-models",
+        str(num_models),
+        "--num-seeds",
+        str(num_seeds),
+    ]
+    if not skip_relax:
+        cmd.append("--amber")
+    if model_type:
+        cmd += ["--model-type", model_type]
+    cmd += [str(fasta_path), str(td)]
+
+    env = os.environ.copy()
+    env.setdefault("TF_CPP_MIN_LOG_LEVEL", "2" if verbosity in {"warn", "silent"} else "1")
+    env.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
+    env.setdefault("XLA_PYTHON_CLIENT_MEM_FRACTION", "0.85")
+
+    log_path = td / "colabfold.log"
+    stdout = open(log_path, "w")
+    try:
+        subprocess.run(cmd, check=True, env=env, stdout=stdout, stderr=subprocess.STDOUT, text=True)
+    finally:
+        stdout.close()
+
+    results: List[Tuple[Path, List[float]]] = []
+    best_candidates = ["*rank_001*.pdb", "*best*.pdb", "*.pdb"]
+    for name in names:
+        out_dir = td / name
+        pdb_path = None
+        for pat in best_candidates:
+            hits = sorted(out_dir.glob(pat))
+            if hits:
+                pdb_path = hits[0]
+                break
+        if pdb_path is None:
+            raise RuntimeError(f"AF2 produced no PDB for sequence {name}")
+        plddt = _plddt_per_residue(pdb_path)
+        results.append((pdb_path, plddt))
+
+    return results
