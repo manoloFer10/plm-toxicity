@@ -321,7 +321,7 @@ def select_and_save_direction(artifact_dir, model_base, kl_validation_samples, c
 def kl_div_fn(
     logits_a, #: Float[Tensor, 'batch seq_pos d_vocab']
     logits_b, #: Float[Tensor, 'batch seq_pos d_vocab']
-    epsilon #: Float=1e-6
+    epsilon=1e-6 #: Float=1e-6
 ): # -> Float[Tensor, 'batch']
     """
     Compute the KL divergence loss between two tensors of logits.
