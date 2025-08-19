@@ -5,6 +5,8 @@ BASE="${RUNPOD_PERSISTENT_DIR:-/workspace}"
 
 echo "$BASE"
 
+export BASE
+
 echo "🔥  Installing Miniconda …"
 
 # ── 1. pick a valid installer (use 'latest' unless you need a frozen build)
