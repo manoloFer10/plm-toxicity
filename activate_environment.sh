@@ -3,9 +3,8 @@ set -euo pipefail                       # fail fast & catch unset vars
 BASE="${RUNPOD_PERSISTENT_DIR:-/workspace}"
 [ -d "$BASE" ] || BASE="$HOME"
 
-echo "$BASE"
+echo "export BASE=$BASE" >> ~/.bashrc
 
-export BASE
 
 echo "🔥  Installing Miniconda …"
 
