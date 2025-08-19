@@ -440,7 +440,7 @@ dependencies:
       - hf-xet==1.1.7
       - huggingface-hub==0.34.3
       - ipykernel==6.30.0
-      - jax==0.4.26
+      - jax==0.5.3
       - jaxlib==0.4.26
       - jaxtyping==0.3.2
       - jsonschema==4.25.0
