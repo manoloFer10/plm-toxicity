@@ -174,13 +174,13 @@ def select_direction(
                                              top_k=top_k, 
                                              batch_size=batch_size, 
                                              artifact_path=artifact_dir, 
-                                             setting= f'l{source_layer}_pos{n_pos}_toxicity_ablation', 
+                                             setting= f'l{source_layer}_pos{source_pos}_toxicity_ablation', 
                                              fwd_pre_hooks=fwd_pre_hooks, fwd_hooks=fwd_hooks
             )
             ablation_tox_scores[source_pos, source_layer] = tox_scores
 
     for source_pos in range(-n_pos, 0):
-        for source_layer in tqdm(range(n_layer), desc=f"Computing refusal addition for source position {source_pos}"):
+        for source_layer in tqdm(range(0, n_layer, layer_step), desc=f"Computing refusal addition for source position {source_pos}"):
 
             tox_vector = candidate_directions[source_pos, source_layer]
             coeff = torch.tensor(1.0)
@@ -193,7 +193,7 @@ def select_direction(
                                                  top_k=top_k, 
                                                  batch_size=batch_size, 
                                                  artifact_path=artifact_dir, 
-                                                 setting= f'l{source_layer}_pos{n_pos}_toxicity_addition', 
+                                                 setting= f'l{source_layer}_pos{source_pos}_toxicity_addition', 
                                                  fwd_pre_hooks=fwd_pre_hooks, 
                                                  fwd_hooks=fwd_hooks)
             steering_tox_scores[source_pos, source_layer] = refusal_scores
