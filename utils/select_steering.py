@@ -135,6 +135,7 @@ def select_direction(
     baseline_non_tox_logits = get_last_position_logits(
         model=model.model,
         instructions=kl_validation_samples,
+        tokenize_instructions_fn=model.tokenize_instructions_fn,
         fwd_pre_hooks=[],
         fwd_hooks=[],
         batch_size=batch_size
@@ -149,7 +150,7 @@ def select_direction(
             fwd_hooks += [(model.model_mlp_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.config.num_hidden_layers)]
 
             intervention_logits = get_last_position_logits(
-                model=model,
+                model=model.model,
                 tokenizer=model.tokenizer,
                 instructions=kl_validation_samples,
                 tokenize_instructions_fn=model.tokenize_instructions_fn,
