@@ -2,6 +2,8 @@ import shutil, subprocess, tempfile, hashlib, os
 from pathlib import Path
 from typing import List
 from typing import Tuple
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 
 DEFAULT_PFAM_DB = Path(os.environ.get("PFAM_DB_DIR", "~/db/pfam")).expanduser()
 
@@ -79,7 +81,7 @@ def pfam_domains_parallel(
     pfam_db_dir: Path | None = None,
     use_ga: bool = True,
     min_hmm_cov: float = 0.5,
-    max_workers: int | None = None,
+    max_workers: int | None = 10,
 ) -> List[List[str]]:
     """Run :func:`pfam_domains` for multiple sequences in parallel.
 
@@ -100,7 +102,7 @@ def pfam_domains_parallel(
     if not sequences:
         return []
 
-    from concurrent.futures import ThreadPoolExecutor, as_completed
+    max_workers= max(max_workers, len(sequences)) if max_workers is not None else None
 
     results: List[List[str]] = [[] for _ in sequences]
     with ThreadPoolExecutor(max_workers=max_workers) as ex:
