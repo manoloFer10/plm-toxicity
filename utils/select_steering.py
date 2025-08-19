@@ -71,7 +71,7 @@ def get_toxicity_scores(model, n_samples=1000, top_k=100, batch_size =8, samplin
 
     most_viable, ppls = sampling_pipeline(model, batch_size=batch_size, n_samples=n_samples, top_k=top_k, sampling_seed=sampling_seed)
 
-    toxic_prob, non_toxic_prob = score_toxicity(most_viable, batch_size=50) 
+    toxic_prob, non_toxic_prob = score_toxicity(most_viable, batch_size=100) 
     df = pd.DataFrame(
             zip(most_viable, toxic_prob, non_toxic_prob, ppls),
             columns=["sequence", "tox_score", "non_tox score", "ppl"],
@@ -80,7 +80,7 @@ def get_toxicity_scores(model, n_samples=1000, top_k=100, batch_size =8, samplin
 
     avg_toxic_prob = sum(toxic_prob) / len(toxic_prob) if toxic_prob else 0
 
-    print(f'For {setting} got: \n Average Toxicity: {avg_toxic_prob}, Weighted Toxicity: {weighted_toxic_prob}')
+    print(f'For {setting} got: \n Average Toxicity: {avg_toxic_prob}')
     return avg_toxic_prob
 
 
@@ -113,16 +113,18 @@ def select_direction(
     top_k:int = 100,
     kl_threshold:float = 0.1, # directions larger KL score are filtered out
 
-    induce_refusal_threshold=0.0, # directions with a lower inducing refusal score are filtered out MANU: what to do with this
+    #induce_refusal_threshold=0.0, # directions with a lower inducing refusal score are filtered out MANU: what to do with this
 
     prune_layer_percentage=0.2, # discard the directions extracted from the last 20% of the model
-    batch_size=32
+    batch_size=64,
+    layer_step: int = 2
 ):
     if not os.path.exists(artifact_dir):
         os.makedirs(artifact_dir)
 
     n_pos, n_layer, d_model = candidate_directions.shape
 
+    print(f'Executing direction selection pipeline with {layer_step=}')
 
     baseline_tox_score = get_toxicity_scores(model, n_samples, top_k=top_k, artifact_path=artifact_dir, batch_size=batch_size, setting='baseline')
 
@@ -139,7 +141,7 @@ def select_direction(
     )
 
     for source_pos in range(-n_pos, 0):
-        for source_layer in tqdm(range(n_layer), desc=f"Computing KL for source position {source_pos}"):
+        for source_layer in tqdm(range(0, n_layer, layer_step), desc=f"Computing KL for source position {source_pos}"):
 
             ablation_dir = candidate_directions[source_pos, source_layer]
             fwd_pre_hooks = [(model.model_block_modules[layer], get_direction_ablation_input_pre_hook(direction=ablation_dir)) for layer in range(model.config.num_hidden_layers)]
@@ -159,7 +161,7 @@ def select_direction(
             ablation_kl_div_scores[source_pos, source_layer] = kl_div_fn(baseline_non_tox_logits, intervention_logits).mean(dim=0).item()
 
     for source_pos in range(-n_pos, 0):
-        for source_layer in tqdm(range(n_layer), desc=f"Computing refusal ablation for source position {source_pos}"):
+        for source_layer in tqdm(range(0, n_layer, layer_step), desc=f"Computing refusal ablation for source position {source_pos}"):
 
             ablation_dir = candidate_directions[source_pos, source_layer]
             fwd_pre_hooks = [(model.model_block_modules[layer], get_direction_ablation_input_pre_hook(direction=ablation_dir)) for layer in range(model.config.num_hidden_layers)]
@@ -223,30 +225,27 @@ def select_direction(
                 'kl_div_score': ablation_kl_div_scores[source_pos, source_layer].item()
             })
 
-            refusal_score = ablation_tox_scores[source_pos, source_layer].item()
-            steering_score = steering_tox_scores[source_pos, source_layer].item()
+            ablation_tox_score = ablation_tox_scores[source_pos, source_layer].item()
+            steering_tox_score = steering_tox_scores[source_pos, source_layer].item()
             kl_div_score = ablation_kl_div_scores[source_pos, source_layer].item()
 
-            # we sort the directions in descending order (from highest to lowest score)
-            # the intervention is better at bypassing refusal if the refusal score is low, so we multiply by -1
-            sorting_score = -refusal_score
 
             # we filter out directions if the KL threshold 
             discard_direction = filter_fn(
-                refusal_score=refusal_score,
-                steering_score=steering_score,
+                ablation_tox_score=ablation_tox_score,
+                steering_tox_score=steering_tox_score,
                 kl_div_score=kl_div_score,
                 layer=source_layer,
                 n_layer=n_layer,
                 kl_threshold=kl_threshold,
-                induce_refusal_threshold=induce_refusal_threshold,
                 prune_layer_percentage=prune_layer_percentage
             )
 
             if discard_direction:
                 continue
 
-            filtered_scores.append((sorting_score, source_pos, source_layer))
+            # select the direction that maximizes toxicity
+            filtered_scores.append((steering_tox_score, source_pos, source_layer))
 
             json_output_filtered_scores.append({
                 'position': source_pos,
@@ -273,31 +272,31 @@ def select_direction(
     score, pos, layer = filtered_scores[0]
 
     print(f"Selected direction: position={pos}, layer={layer}")
-    print(f"Refusal score: {ablation_tox_scores[pos, layer]:.4f} (baseline: {baseline_refusal_scores_harmful.mean().item():.4f})")
-    print(f"Steering score: {steering_tox_scores[pos, layer]:.4f} (baseline: {baseline_refusal_scores_harmless.mean().item():.4f})")
+    print(f"Refusal score: {ablation_tox_scores[pos, layer]:.4f} (baseline: {baseline_tox_score:.4f})")
+    print(f"Steering score: {steering_tox_scores[pos, layer]:.4f} (baseline: {baseline_tox_score:.4f})")
     print(f"KL Divergence: {ablation_kl_div_scores[pos, layer]:.4f}")
     
     return pos, layer, candidate_directions[pos, layer]
 
 
 
-def select_and_save_direction(cfg, model_base, harmful_val, harmless_val, candidate_directions):
+def select_and_save_direction(artifact_dir, model_base, non_tox_val_sequences, candidate_directions):
     """Select and save the direction."""
-    if not os.path.exists(os.path.join(cfg.artifact_path(), 'select_direction')):
-        os.makedirs(os.path.join(cfg.artifact_path(), 'select_direction'))
+    if not os.path.exists(os.path.join(artifact_dir, 'select_direction')):
+        os.makedirs(os.path.join(artifact_dir, 'select_direction'))
 
     pos, layer, direction = select_direction(
         model_base,
         harmful_val,
         harmless_val,
         candidate_directions,
-        artifact_dir=os.path.join(cfg.artifact_path(), "select_direction")
+        artifact_dir=os.path.join(artifact_dir, "select_direction")
     )
 
-    with open(f'{cfg.artifact_path()}/direction_metadata.json', "w") as f:
+    with open(f'{artifact_dir}/direction_metadata.json', "w") as f:
         json.dump({"pos": pos, "layer": layer}, f, indent=4)
 
-    torch.save(direction, f'{cfg.artifact_path()}/direction.pt')
+    torch.save(direction, f'{artifact_dir}/direction.pt')
 
     return pos, layer, direction
 
@@ -320,3 +319,17 @@ def kl_div_fn(
 
     return torch.mean(kl_divs, dim=-1)
     
+
+    # returns True if the direction should be filtered out
+def filter_fn(ablation_tox_score, steering_tox_score, kl_div_score, layer, n_layer, kl_threshold=None, baseline_tox_score=None, prune_layer_percentage=0.20) -> bool:
+    if math.isnan(ablation_tox_score) or math.isnan(steering_tox_score) or math.isnan(kl_div_score):
+        return True
+    if prune_layer_percentage is not None and layer >= int(n_layer * (1.0 - prune_layer_percentage)):
+        return True
+    if kl_threshold is not None and kl_div_score > kl_threshold:
+        return True
+    if baseline_tox_score is not None and ablation_tox_score >= baseline_tox_score: #ablation is generating more toxic proteins
+        return True
+    if baseline_tox_score is not None and steering_tox_score <= baseline_tox_score: #steering is generating less toxic proteins
+        return True
+    return False
