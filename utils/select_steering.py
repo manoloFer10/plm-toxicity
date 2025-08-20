@@ -183,14 +183,18 @@ def select_direction(
             fwd_hooks = [(model.model_attn_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.model.config.num_hidden_layers)]
             fwd_hooks += [(model.model_mlp_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.model.config.num_hidden_layers)]
 
-            ablation_tox_score = get_toxicity_scores(model, 
-                                             n_samples, 
-                                             top_k=top_k, 
-                                             batch_size=batch_size, 
-                                             artifact_path=artifact_dir, 
-                                             setting= f'l{source_layer}_pos{source_pos}_toxicity_ablation', 
-                                             fwd_pre_hooks=fwd_pre_hooks, fwd_hooks=fwd_hooks
-            )
+            try:
+                ablation_tox_score = get_toxicity_scores(model, 
+                                                n_samples, 
+                                                top_k=top_k, 
+                                                batch_size=batch_size, 
+                                                artifact_path=artifact_dir, 
+                                                setting= f'l{source_layer}_pos{source_pos}_toxicity_ablation', 
+                                                fwd_pre_hooks=fwd_pre_hooks, fwd_hooks=fwd_hooks
+                )
+            except Exception as e:
+                print(f"Error occurred while computing toxicity scores: {e}")
+                ablation_tox_score = float("nan")
             ablation_tox_scores[source_pos, source_layer] = ablation_tox_score
 
     for source_pos in range(-n_pos, 0):
@@ -202,14 +206,19 @@ def select_direction(
             fwd_pre_hooks = [(model.model_block_modules[source_layer], get_activation_addition_input_pre_hook(vector=tox_vector, coeff=coeff))]
             fwd_hooks = []
 
-            steering_tox_score = get_toxicity_scores(model, 
-                                                 n_samples, 
-                                                 top_k=top_k, 
-                                                 batch_size=batch_size, 
-                                                 artifact_path=artifact_dir, 
-                                                 setting= f'l{source_layer}_pos{source_pos}_toxicity_addition', 
-                                                 fwd_pre_hooks=fwd_pre_hooks, 
-                                                 fwd_hooks=fwd_hooks)
+            try:
+                steering_tox_score = get_toxicity_scores(model, 
+                                                    n_samples, 
+                                                    top_k=top_k, 
+                                                    batch_size=batch_size, 
+                                                    artifact_path=artifact_dir, 
+                                                    setting= f'l{source_layer}_pos{source_pos}_toxicity_addition', 
+                                                    fwd_pre_hooks=fwd_pre_hooks, 
+                                                    fwd_hooks=fwd_hooks)
+            except Exception as e:
+                print(f"Error occurred while computing toxicity scores: {e}")
+                steering_tox_score = float("nan")
+                
             steering_tox_scores[source_pos, source_layer] = steering_tox_score
 
     try:
