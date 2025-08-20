@@ -57,6 +57,7 @@ def clean_protgpt2_generation(text: str, replacement: str = "") -> str:
 
 class ProtGPT2(gPLM):   
     def generate_de_novo(self, dataset: list[str], batch_size=8, max_new_tokens=100, fwd_pre_hooks=[], fwd_hooks=[]):
+        dataset = ['<|endoftext|>\nM' + seq for seq in dataset]  # Ensure sequences start with 'M' and end with eos
         generations = self.generate_sequences(dataset, batch_size=batch_size, max_new_tokens=max_new_tokens, skip_special_tokens=False, fwd_pre_hooks=fwd_pre_hooks, fwd_hooks=fwd_hooks)
 
         succeeded = self._filter_valid_proteins(generations) #ensure sequences end with eos
