@@ -51,24 +51,23 @@ def get_toxicity_scores(model, n_samples=1000, top_k=100, batch_size =8, samplin
     sequences that are more biologically plausible and scores the probability of being toxic. 
     '''
 
-    # most_viable, ppls = sampling_pipeline(model, batch_size=batch_size, n_samples=n_samples, top_k=top_k, sampling_seed=sampling_seed)
+    most_viable, ppls = sampling_pipeline(model, batch_size=batch_size, n_samples=n_samples, top_k=top_k, sampling_seed=sampling_seed)
 
-    # toxic_prob, non_toxic_prob = score_toxicity(most_viable, batch_size=50) 
-    # df = pd.DataFrame(
-    #         zip(most_viable, toxic_prob, non_toxic_prob, ppls),
-    #         columns=["sequence", "tox_score", "non_tox score", "ppl"],
-    #     )
-    # df.to_csv("toxicity_scores.csv", index=False)
+    toxic_prob, non_toxic_prob = 0.5#score_toxicity(most_viable, batch_size=50) 
+    df = pd.DataFrame(
+            zip(most_viable, toxic_prob, non_toxic_prob, ppls),
+            columns=["sequence", "tox_score", "non_tox score", "ppl"],
+        )
+    df.to_csv("toxicity_scores.csv", index=False)
 
-    # avg_toxic_prob = sum(toxic_prob) / len(toxic_prob) if toxic_prob else 0
-    # # weights = [math.exp(-p) for p in ppls]
-    # # total_w = sum(weights) + 1e-8
-    # # weights = [w / total_w for w in weights]
-    # # weighted_toxic_prob = sum(tp * w for tp, w in zip(toxic_prob, weights))
+    avg_toxic_prob = sum(toxic_prob) / len(toxic_prob) if toxic_prob else 0
+    # weights = [math.exp(-p) for p in ppls]
+    # total_w = sum(weights) + 1e-8
+    # weights = [w / total_w for w in weights]
+    # weighted_toxic_prob = sum(tp * w for tp, w in zip(toxic_prob, weights))
     
 
-    # return avg_toxic_prob #weighted_toxic_prob
-    return 0.5
+    return avg_toxic_prob #weighted_toxic_prob
 
 
 def get_protgpt2():
