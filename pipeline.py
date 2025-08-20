@@ -22,6 +22,7 @@ def main():
     n_samples = 1500
     top_k=50
     batch_size=128
+    layer_step=1
 
 
     artifact_dir = 'activations'
@@ -40,7 +41,8 @@ def main():
                                         candidate_directions=mean_diffs,
                                         n_samples=n_samples,
                                         top_k=top_k,
-                                        batch_size=batch_size
+                                        batch_size=batch_size,
+                                        layer_step=layer_step
                                     )
     
     print(f'Successfully extracted best direction in pos {pos} and layer {layer}: {direction=}')

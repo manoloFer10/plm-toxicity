@@ -319,7 +319,7 @@ def select_direction(
 
 
 
-def select_and_save_direction(artifact_dir, model_base, kl_validation_samples, candidate_directions, n_samples = 1000, top_k = 100, batch_size=128):
+def select_and_save_direction(artifact_dir, model_base, kl_validation_samples, candidate_directions, n_samples = 1000, top_k = 100, batch_size=128, layer_step=2):
     """Select and save the direction."""
     if not os.path.exists(os.path.join(artifact_dir, 'select_direction')):
         os.makedirs(os.path.join(artifact_dir, 'select_direction'))
@@ -331,7 +331,8 @@ def select_and_save_direction(artifact_dir, model_base, kl_validation_samples, c
         artifact_dir=os.path.join(artifact_dir, "select_direction"),
         n_samples = n_samples,
         top_k = top_k,
-        batch_size = batch_size
+        batch_size = batch_size,
+        layer_step=layer_step
     )
 
     with open(f'{artifact_dir}/direction_metadata.json', "w") as f:
