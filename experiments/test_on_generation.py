@@ -31,7 +31,7 @@ def get_most_viable(model, sequences, top_k=100, batch_size = 8):
     ppls = [p for _, p in scored]
     return sequences, ppls
 
-def sampling_pipeline(model, batch_size, n_samples=1000, top_k=100, max_new_tokens=200, sampling_seed = 'M'):
+def sampling_pipeline(model, batch_size, n_samples=1000, top_k=100, max_new_tokens=200, sampling_seed = '<|endoftext|>\nM'):
     prompts = [
         sampling_seed
         for _ in range(n_samples)
