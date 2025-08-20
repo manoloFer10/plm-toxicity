@@ -13,6 +13,8 @@ def get_most_viable(model, sequences, top_k=100, batch_size = 8):
     
     tokenizer_fn = model.tokenize_instructions_fn
     
+    top_k = min(top_k, len(sequences))
+
     scored = []
     for i in range(0, len(sequences), batch_size):
         batch_sequences = sequences[i:i+batch_size]
