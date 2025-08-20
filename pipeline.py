@@ -18,8 +18,8 @@ def get_activation_extraction_data():
 def main():
 
     n_samples = 1000
-    top_k=100
-    batch_size=128
+    top_k=50
+    batch_size=68
 
 
     artifact_dir = 'activations'
