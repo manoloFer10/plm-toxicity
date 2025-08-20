@@ -1,6 +1,8 @@
 
-import math
-import torch
+import os
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # stable indexing
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"        # only show GPU 0 to this process
+
 import pandas as pd
 from utils.scoring import score_toxicity, calculatePerplexity
 from utils.models.protgpt2 import clean_protgpt2_generation

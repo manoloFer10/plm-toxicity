@@ -377,6 +377,10 @@ def get_af2_structure_batch(
     env = os.environ.copy()
     env.setdefault("TF_CPP_MIN_LOG_LEVEL", "2" if verbosity in {"warn", "silent"} else "1")
     env.setdefault("XLA_PYTHON_CLIENT_ALLOCATOR", "platform")
+    env["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+    env["CUDA_VISIBLE_DEVICES"] = 1           # "1" means physical GPU #1
+    # If you run inside NVIDIA docker runtime, this also helps:
+    env["NVIDIA_VISIBLE_DEVICES"] = 1
     env["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.30"  # lower than 0.85
     env["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
     env["JAX_PLATFORMS"] = "cuda"

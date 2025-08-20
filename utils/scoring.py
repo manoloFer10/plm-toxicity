@@ -83,7 +83,8 @@ class ToxDL2Scorer():
             skip_relax=True,
             verbosity=self.af2_verbosity,
             mem_fraction=mem_fraction
-        )
+        ).to(self.device) #ensure same gpu
+
         domain_lists = pfam_domains_parallel(seqs)
         prepared = []
         for seq, domains, (pdb_path, plddt_per_res) in zip(seqs, domain_lists, structures):
