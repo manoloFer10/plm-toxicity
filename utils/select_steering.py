@@ -96,7 +96,7 @@ def get_toxicity_scores(model, n_samples=1000, top_k=100, batch_size =8, samplin
     # print(f'For {setting} got: \n Average Toxicity: {avg_toxic_prob}')
     #return avg_toxic_prob
     #debug
-    return torch.tensor(0.5)
+    return 0.5
 
 
 def get_last_position_logits(model, instructions, tokenize_instructions_fn, fwd_pre_hooks=[], fwd_hooks=[], batch_size=32):
@@ -144,9 +144,9 @@ def select_direction(
 
     baseline_tox_score = get_toxicity_scores(model, n_samples, top_k=top_k, artifact_path=artifact_dir, batch_size=batch_size, setting='baseline')
 
-    ablation_kl_div_scores = torch.zeros((n_pos, n_layer), device=model.device, dtype=torch.float64)
-    ablation_tox_scores = torch.zeros((n_pos, n_layer), device=model.device, dtype=torch.float64)
-    steering_tox_scores = torch.zeros((n_pos, n_layer), device=model.device, dtype=torch.float64)
+    ablation_kl_div_scores = torch.full((n_pos, n_layer), float("nan"), device=model.device, dtype=torch.float64)
+    ablation_tox_scores = torch.full((n_pos, n_layer), float("nan"), device=model.device, dtype=torch.float64)
+    steering_tox_scores = torch.full((n_pos, n_layer), float("nan"), device=model.device, dtype=torch.float64)
 
     baseline_non_tox_logits = get_last_position_logits(
         model=model.model,
@@ -240,6 +240,9 @@ def select_direction(
     except Exception as e: 
         print(f'Error when creating figures: {e}')
 
+    def _json_sanitize(x: float):
+        return None if (isinstance(x, float) and (math.isnan(x) or math.isinf(x))) else x
+
     filtered_scores = []
     json_output_all_scores = []
     json_output_filtered_scores = []
@@ -247,9 +250,9 @@ def select_direction(
     for source_pos in range(-n_pos, 0):
         for source_layer in range(n_layer):
 
-            ablation_tox_val = ablation_tox_scores[source_pos, source_layer].item()
-            steering_tox_val = steering_tox_scores[source_pos, source_layer].item()
-            kl_div_score = ablation_kl_div_scores[source_pos, source_layer].item()
+            ablation_tox_val = _json_sanitize(float(ablation_tox_scores[source_pos, source_layer].item()))
+            steering_tox_val = _json_sanitize(float(steering_tox_scores[source_pos, source_layer].item()))
+            kl_div_score = _json_sanitize(float(ablation_kl_div_scores[source_pos, source_layer].item()))
 
             json_output_all_scores.append({
                 'position': source_pos,
