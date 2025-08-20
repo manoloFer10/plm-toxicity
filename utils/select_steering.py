@@ -252,12 +252,12 @@ def select_direction(
                 'layer': source_layer,
                 'refusal_score': ablation_tox_scores[source_pos, source_layer],
                 'steering_score': steering_tox_scores[source_pos, source_layer],
-                'kl_div_score': ablation_kl_div_scores[source_pos, source_layer]
+                'kl_div_score': ablation_kl_div_scores[source_pos, source_layer].item()
             })
 
             ablation_tox_score = ablation_tox_scores[source_pos, source_layer]
             steering_tox_score = steering_tox_scores[source_pos, source_layer]
-            kl_div_score = ablation_kl_div_scores[source_pos, source_layer]
+            kl_div_score = ablation_kl_div_scores[source_pos, source_layer].item()
 
 
             # we filter out directions if the KL threshold 
@@ -282,7 +282,7 @@ def select_direction(
                 'layer': source_layer,
                 'refusal_score': ablation_tox_scores[source_pos, source_layer],
                 'steering_score': steering_tox_scores[source_pos, source_layer],
-                'kl_div_score': ablation_kl_div_scores[source_pos, source_layer]
+                'kl_div_score': ablation_kl_div_scores[source_pos, source_layer].item()
             })   
 
     with open(f"{artifact_dir}/direction_evaluations.json", 'w') as f:
