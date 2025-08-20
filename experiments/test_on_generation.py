@@ -38,9 +38,8 @@ def sampling_pipeline(model, batch_size, n_samples=1000, top_k=100, max_new_toke
     ]
 
     generated_sequences = model.generate_de_novo(prompts, batch_size=batch_size, max_new_tokens=max_new_tokens) #ensure that sequences end
-    generated_sequences= [clean_protgpt2_generation(seq) for seq in generated_sequences]
 
-    generated_sequences = [seq for seq in generated_sequences if 15 < len(seq) < 250] #limit the generated sequences for AF2 prediction (upper bound is for compute resource)
+    generated_sequences = [seq for seq in generated_sequences if 15 < len(clean_protgpt2_generation(seq)) < 250] #limit the generated sequences for AF2 prediction (upper bound is for compute resource)
 
     most_viable, ppls = get_most_viable(model, generated_sequences, top_k, batch_size=32) # get top_k with lowest ppl
 

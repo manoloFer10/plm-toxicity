@@ -25,6 +25,7 @@ def get_protgpt2_generation_pipeline():
 
 
 def add_endlines(sequence):
+    sequence = sequence.replace('<|endoftext|>', '')  # remove endoftext tokens
     endlines = "\n".join(sequence[i:i+60] for i in range(0, len(sequence), 60))
     return "\n" + endlines + "\n"
 
@@ -60,7 +61,7 @@ class ProtGPT2(gPLM):
 
         succeeded = self._filter_valid_proteins(generations) #ensure sequences end with eos
 
-        succeeded = [add_endlines(seq) for seq in succeeded]
+        succeeded = [format_sequence_protgpt2(seq) for seq in succeeded]
 
         return succeeded
     

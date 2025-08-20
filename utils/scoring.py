@@ -18,9 +18,6 @@ from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
 from tqdm import tqdm
 
-
-# Los modelos de toxicidad sólo pueden ver 50 aa. OK -> agarremos todas las proteínas de longitud mayor a 50 aa y veamos si las catalogan bien.
-
 WIN = 50
 STRIDE = 25
 PLDDT_MIN = 70.0   # confidence minimum for AF pLDDT
