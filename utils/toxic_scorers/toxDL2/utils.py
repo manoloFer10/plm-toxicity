@@ -376,7 +376,7 @@ def get_af2_structure_batch(
 
     env = os.environ.copy()
     env.setdefault("TF_CPP_MIN_LOG_LEVEL", "2" if verbosity in {"warn", "silent"} else "1")
-    env.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
+    #env.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
     #env.setdefault("XLA_PYTHON_CLIENT_MEM_FRACTION", "0.85")
     env.setdefault("XLA_PYTHON_CLIENT_MEM_FRACTION", str(mem_fraction))
 
