@@ -19,7 +19,7 @@ def get_activation_extraction_data():
 
 def main():
 
-    n_samples = 1000
+    n_samples = 1500
     top_k=50
     batch_size=128
 
