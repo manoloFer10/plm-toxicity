@@ -161,7 +161,7 @@ def select_direction(
 
             ablation_dir = candidate_directions[source_pos, source_layer]
             fwd_pre_hooks = [(model.model_block_modules[layer], get_direction_ablation_input_pre_hook(direction=ablation_dir)) for layer in range(model.model.config.num_hidden_layers)
-                             if 0.2 < layer // model.model.config.num_hidden_layers < 0.8]
+                             if 0.2 < layer / model.model.config.num_hidden_layers < 0.8]
             #fwd_hooks = [(model.model_attn_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.model.config.num_hidden_layers)]
             #fwd_hooks += [(model.model_mlp_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.model.config.num_hidden_layers)]
             fwd_hooks = []
@@ -182,11 +182,11 @@ def select_direction(
 
             ablation_dir = candidate_directions[source_pos, source_layer]
             fwd_pre_hooks = [(model.model_block_modules[layer], get_direction_ablation_input_pre_hook(direction=ablation_dir)) for layer in range(model.model.config.num_hidden_layers)
-                             if 0.2 < layer // model.model.config.num_hidden_layers < 0.8] # ablate on intermediate layers only
+                             if 0.2 < layer / model.model.config.num_hidden_layers < 0.8] # ablate on intermediate layers only
             # fwd_hooks = [(model.model_attn_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.model.config.num_hidden_layers)
-            #              if 0.2 < layer // model.model.config.num_hidden_layers < 0.8]
+            #              if 0.2 < layer / model.model.config.num_hidden_layers < 0.8]
             #fwd_hooks += [(model.model_mlp_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.model.config.num_hidden_layers)
-            #              if 0.2 < layer // model.model.config.num_hidden_layers < 0.8]
+            #              if 0.2 < layer / model.model.config.num_hidden_layers < 0.8]
             fwd_hooks = []
 
             try:
