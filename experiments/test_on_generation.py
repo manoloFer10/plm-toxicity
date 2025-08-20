@@ -48,7 +48,7 @@ def sampling_pipeline(model, batch_size, n_samples=1000, top_k=100, max_new_toke
     return most_viable, ppls
 
 
-def get_toxicity_scores(model, n_samples=100, top_k=100, batch_size =8, sampling_seed = 'M'):
+def get_toxicity_scores(model, n_samples=1000, top_k=100, batch_size =8, sampling_seed = 'M'):
     '''
     Given a model and an initiator sequence (ej: "M" ), samples generation from the model, filters by the top-k
     sequences that are more biologically plausible and scores the probability of being toxic. 
