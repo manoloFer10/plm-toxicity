@@ -1,6 +1,7 @@
 import gc
 import torch, math, warnings, time
 import numpy as np
+import torch.nn.functional as F
 from utils.toxic_scorers.toxDL2.model import (
     load_ToxDL2_model, load_domain2vector,
     esm_embed_sequence, parse_calpha_coords, edges_from_coords
@@ -375,12 +376,32 @@ def calculatePerplexity(sequences, model, tokenizer_fn, batch_size=64):
     ppls = []
     for i in range(0, len(sequences), batch_size):
         seqs = sequences[i:i+batch_size]
-        input_ids = tokenizer_fn(seqs)['input_ids']
-        input_ids = input_ids.to(model.device)
+        enc = tokenizer_fn(seqs)
+        input_ids = enc['input_ids'].to(model.device)
+        attention_mask = enc.get('attention_mask', torch.ones_like(input_ids)).to(model.device)
+
         with torch.no_grad():
-            outputs = model.model(input_ids, labels=input_ids)
-        loss, logits = outputs[:2]
-        ppl = torch.exp(loss)
-        ppls.extend(ppl.tolist())
+            out = model.model(input_ids)
+            logits = out.logits  # [B, L, V]
+
+        # shift for next-token prediction
+        shift_logits = logits[:, :-1, :]               # [B, L-1, V]
+        shift_labels = input_ids[:, 1:]                # [B, L-1]
+        shift_mask = attention_mask[:, 1:]             # [B, L-1]
+
+        vocab_size = shift_logits.size(-1)
+        loss_tokens = F.cross_entropy(
+            shift_logits.reshape(-1, vocab_size),
+            shift_labels.reshape(-1),
+            reduction='none'
+        ).reshape(shift_labels.size())                 # [B, L-1]
+
+        # mask out padding
+        loss_tokens = loss_tokens * shift_mask
+        lengths = shift_mask.sum(dim=1).clamp(min=1)   # avoid div by zero
+        loss_per_seq = loss_tokens.sum(dim=1) / lengths
+        ppl_per_seq = torch.exp(loss_per_seq).detach().cpu().tolist()
+
+        ppls.extend(ppl_per_seq)
     print(ppls)
     return ppls
