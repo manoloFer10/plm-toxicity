@@ -397,15 +397,17 @@ def calculatePerplexity(sequences, model, tokenizer_fn):
     print(token_losses)
     token_losses = token_losses.view(shift_labels.size())
     print(token_losses)
-
     if attention_mask is not None:
         mask = attention_mask[..., 1:]
         token_losses = token_losses * mask
-    
+        per_seq_loss = token_losses.sum(dim=1) / mask.sum(dim=1)
+    else:
+        per_seq_loss = token_losses.mean(dim=1)
 
-    perplexities = torch.exp(token_losses)
+    print(per_seq_loss)
+    perplexities = torch.exp(per_seq_loss)
 
-    input_ids = tokenizer_fn(sequences)["input_ids"]
+    input_ids = tokenizer_fn(sequences)['input_ids']
     input_ids = input_ids.to(model.device)
     with torch.no_grad():
         outputs = model(input_ids, labels=input_ids)
