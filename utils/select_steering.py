@@ -166,8 +166,33 @@ def select_direction(
 
             ablation_kl_div_scores[source_pos, source_layer] = kl_div_fn(baseline_non_tox_logits, intervention_logits).mean(dim=0).item()
 
+
     for source_pos in range(-n_pos, 0):
-        for source_layer in tqdm(range(0, n_layer, layer_step), desc=f"Computing refusal ablation for source position {source_pos}"):
+            for source_layer in tqdm(range(0, n_layer, layer_step), desc=f"Computing tox addition for source position {source_pos}"):
+
+                tox_vector = candidate_directions[source_pos, source_layer]
+                coeff = torch.tensor(1.0)
+
+                fwd_pre_hooks = [(model.model_block_modules[source_layer], get_activation_addition_input_pre_hook(vector=tox_vector, coeff=coeff))]
+                fwd_hooks = []
+
+                try:
+                    steering_tox_score = get_toxicity_scores(model, 
+                                                        n_samples, 
+                                                        top_k=top_k, 
+                                                        batch_size=batch_size, 
+                                                        artifact_path=artifact_dir, 
+                                                        setting= f'l{source_layer}_pos{source_pos}_toxicity_addition', 
+                                                        fwd_pre_hooks=fwd_pre_hooks, 
+                                                        fwd_hooks=fwd_hooks)
+                except Exception as e:
+                    print(f"Error occurred while computing toxicity scores: {e}")
+                    steering_tox_score = float("nan")
+                steering_tox_scores[source_pos, source_layer] = steering_tox_score
+
+
+    for source_pos in range(-n_pos, 0):
+        for source_layer in tqdm(range(0, n_layer, layer_step), desc=f"Computing tox ablation for source position {source_pos}"):
 
             ablation_dir = candidate_directions[source_pos, source_layer]
             fwd_pre_hooks = [(model.model_block_modules[layer], get_direction_ablation_input_pre_hook(direction=ablation_dir)) for layer in range(model.model.config.num_hidden_layers)
@@ -192,28 +217,7 @@ def select_direction(
                 ablation_tox_score = float("nan")
             ablation_tox_scores[source_pos, source_layer] = ablation_tox_score
 
-    for source_pos in range(-n_pos, 0):
-        for source_layer in tqdm(range(0, n_layer, layer_step), desc=f"Computing refusal addition for source position {source_pos}"):
-
-            tox_vector = candidate_directions[source_pos, source_layer]
-            coeff = torch.tensor(1.0)
-
-            fwd_pre_hooks = [(model.model_block_modules[source_layer], get_activation_addition_input_pre_hook(vector=tox_vector, coeff=coeff))]
-            fwd_hooks = []
-
-            try:
-                steering_tox_score = get_toxicity_scores(model, 
-                                                    n_samples, 
-                                                    top_k=top_k, 
-                                                    batch_size=batch_size, 
-                                                    artifact_path=artifact_dir, 
-                                                    setting= f'l{source_layer}_pos{source_pos}_toxicity_addition', 
-                                                    fwd_pre_hooks=fwd_pre_hooks, 
-                                                    fwd_hooks=fwd_hooks)
-            except Exception as e:
-                print(f"Error occurred while computing toxicity scores: {e}")
-                steering_tox_score = float("nan")
-            steering_tox_scores[source_pos, source_layer] = steering_tox_score
+    
 
     try:
         plot_tox_scores(
