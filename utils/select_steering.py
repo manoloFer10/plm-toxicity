@@ -19,7 +19,9 @@ from utils.visualizations import plot_tox_scores
 def get_most_viable(model, sequences, top_k=100, batch_size = 8):
     
     tokenizer_fn = model.tokenize_instructions_fn
-    
+
+    top_k = min(top_k, len(sequences)) #ensure top_k is not greater than available sequences
+
     scored = []
     batch_sequences = []
     for seq in sequences:
@@ -47,13 +49,17 @@ def get_most_viable(model, sequences, top_k=100, batch_size = 8):
     ppls = [p for _, p in scored]
     return sequences, ppls
 
-def sampling_pipeline(model, batch_size, n_samples=1000, top_k=100, max_new_tokens=200, sampling_seed = 'M'):
+def sampling_pipeline(model, batch_size, n_samples=1000, top_k=100, max_new_tokens=200, sampling_seed = 'M', fwd_pre_hooks=[], fwd_hooks=[]):
     prompts = [
         sampling_seed
         for _ in range(n_samples)
     ]
 
-    generated_sequences = model.generate_de_novo(prompts, batch_size=batch_size, max_new_tokens=max_new_tokens) #ensure that sequences end
+    generated_sequences = model.generate_de_novo(prompts, 
+                                                 batch_size=batch_size, 
+                                                 max_new_tokens=max_new_tokens,
+                                                 fwd_pre_hooks=fwd_pre_hooks,
+                                                 fwd_hooks=fwd_hooks) #generate with hooks
 
     generated_sequences = [seq for seq in generated_sequences if 15 < len(clean_protgpt2_generation(seq)) < 250] #limit the generated sequences for AF2 prediction (upper bound is for compute resource)
 
@@ -69,14 +75,21 @@ def get_toxicity_scores(model, n_samples=1000, top_k=100, batch_size =8, samplin
     sequences that are more biologically plausible and scores the probability of being toxic. 
     '''
 
-    most_viable, ppls = sampling_pipeline(model, batch_size=batch_size, n_samples=n_samples, top_k=top_k, sampling_seed=sampling_seed)
+    most_viable, ppls = sampling_pipeline(model, 
+                                          batch_size=batch_size, 
+                                          n_samples=n_samples, 
+                                          top_k=top_k,
+                                          sampling_seed=sampling_seed,
+                                          fwd_pre_hooks=fwd_pre_hooks,
+                                          fwd_hooks=fwd_hooks)
 
-    toxic_prob, non_toxic_prob = score_toxicity(most_viable, batch_size=1) 
+    toxic_prob, non_toxic_prob = score_toxicity(most_viable, batch_size=50) 
+    
     df = pd.DataFrame(
             zip(most_viable, toxic_prob, non_toxic_prob, ppls),
             columns=["sequence", "tox_score", "non_tox score", "ppl"],
         )
-    df.to_csv("toxicity_scores.csv", index=False)
+    df.to_csv(artifact_path + f'/{setting}', index=False)
 
     avg_toxic_prob = sum(toxic_prob) / len(toxic_prob) if toxic_prob else 0
 
