@@ -400,5 +400,4 @@ def calculatePerplexity(sequences, model, tokenizer_fn, batch_size=64):
         ppl_per_seq = torch.exp(loss_per_seq).detach().cpu().tolist()
 
         ppls.extend(ppl_per_seq)
-    print(ppls)
     return ppls
