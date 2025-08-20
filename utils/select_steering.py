@@ -23,27 +23,16 @@ def get_most_viable(model, sequences, top_k=100, batch_size = 8):
     top_k = min(top_k, len(sequences)) #ensure top_k is not greater than available sequences
 
     scored = []
-    batch_sequences = []
-    for seq in sequences:
-        batch_sequences.append(seq)
-        if len(batch_sequences) == batch_size:
-            ppls = calculatePerplexity(batch_sequences, model, tokenizer_fn)
-            ppls = ppls.tolist() if hasattr(ppls, "tolist") else list(ppls)
-            for s, ppl in zip(batch_sequences, ppls):
-                scored.append((s, float(ppl)))
-                scored.sort(key=lambda x: x[1])
-                if len(scored) > top_k:
-                    scored.pop()
-            batch_sequences = []
-
-    if batch_sequences:
-        ppls = calculatePerplexity(batch_sequences, model, tokenizer_fn)
+    for i in range(0, len(sequences), batch_size):
+        batch_sequences = sequences[i:i+batch_size]
+        ppls = calculatePerplexity(batch_sequences, model, tokenizer_fn, batch_size=batch_size)
         ppls = ppls.tolist() if hasattr(ppls, "tolist") else list(ppls)
-        for s, ppl in zip(batch_sequences, ppls):
-            scored.append((s, float(ppl)))
-            scored.sort(key=lambda x: x[1])
-            if len(scored) > top_k:
-                scored.pop()
+        scored.extend(zip(batch_sequences, ppls))
+        print(ppls)
+    
+
+    scored.sort(key=lambda x: x[1])  # sort by perplexity
+    scored = scored[:top_k]  # keep only top_k sequences with lowest perplexity
 
     sequences = [s for s, _ in scored]
     ppls = [p for _, p in scored]
