@@ -371,15 +371,16 @@ def score_toxicity(sequences, batch_size: int = 1):
     return toxic_probs, non_toxic_probs
 
 
-def calculatePerplexity(sequences, model, tokenizer_fn):
+def calculatePerplexity(sequences, model, tokenizer_fn, batch_size=64):
     ppls = []
-    for seq in sequences:
-        input_ids = tokenizer_fn(seq)['input_ids']
+    for i in range(0, len(sequences), batch_size):
+        seqs = sequences[i:i+batch_size]
+        input_ids = tokenizer_fn(seqs)['input_ids']
         input_ids = input_ids.to(model.device)
         with torch.no_grad():
             outputs = model.model(input_ids, labels=input_ids)
         loss, logits = outputs[:2]
-        ppl = math.exp(loss)
-        ppls.append(ppl)
-
+        ppl = torch.exp(loss)
+        ppls.extend(float(x) for x in ppl)
+    print(ppls)
     return ppls
