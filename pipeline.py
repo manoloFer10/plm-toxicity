@@ -1,4 +1,6 @@
 import os
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 from datasets import load_dataset
 from utils.models.protgpt2 import ProtGPT2
 from utils.extract_activations import generate_directions
