@@ -161,9 +161,9 @@ def select_direction(
         for source_layer in tqdm(range(0, n_layer, layer_step), desc=f"Computing KL for source position {source_pos}"):
 
             ablation_dir = candidate_directions[source_pos, source_layer]
-            fwd_pre_hooks = [(model.model_block_modules[layer], get_direction_ablation_input_pre_hook(direction=ablation_dir)) for layer in range(model.config.num_hidden_layers)]
-            fwd_hooks = [(model.model_attn_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.config.num_hidden_layers)]
-            fwd_hooks += [(model.model_mlp_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.config.num_hidden_layers)]
+            fwd_pre_hooks = [(model.model_block_modules[layer], get_direction_ablation_input_pre_hook(direction=ablation_dir)) for layer in range(model.model.config.num_hidden_layers)]
+            fwd_hooks = [(model.model_attn_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.model.config.num_hidden_layers)]
+            fwd_hooks += [(model.model_mlp_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.model.config.num_hidden_layers)]
 
             intervention_logits = get_last_position_logits(
                 model=model.model,
@@ -180,9 +180,9 @@ def select_direction(
         for source_layer in tqdm(range(0, n_layer, layer_step), desc=f"Computing refusal ablation for source position {source_pos}"):
 
             ablation_dir = candidate_directions[source_pos, source_layer]
-            fwd_pre_hooks = [(model.model_block_modules[layer], get_direction_ablation_input_pre_hook(direction=ablation_dir)) for layer in range(model.config.num_hidden_layers)]
-            fwd_hooks = [(model.model_attn_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.config.num_hidden_layers)]
-            fwd_hooks += [(model.model_mlp_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.config.num_hidden_layers)]
+            fwd_pre_hooks = [(model.model_block_modules[layer], get_direction_ablation_input_pre_hook(direction=ablation_dir)) for layer in range(model.model.config.num_hidden_layers)]
+            fwd_hooks = [(model.model_attn_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.model.config.num_hidden_layers)]
+            fwd_hooks += [(model.model_mlp_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.model.config.num_hidden_layers)]
 
             tox_scores = get_toxicity_scores(model, 
                                              n_samples, 
