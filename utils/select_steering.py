@@ -28,7 +28,6 @@ def get_most_viable(model, sequences, top_k=100, batch_size = 8):
         ppls = calculatePerplexity(batch_sequences, model, tokenizer_fn, batch_size=batch_size)
         ppls = ppls.tolist() if hasattr(ppls, "tolist") else list(ppls)
         scored.extend(zip(batch_sequences, ppls))
-        print(ppls)
     
 
     scored.sort(key=lambda x: x[1])  # sort by perplexity
