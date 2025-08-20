@@ -375,6 +375,7 @@ def calculatePerplexity(sequences, model, tokenizer_fn):
     if isinstance(sequences, str):
         sequences = [sequences]
     encoding = tokenizer_fn(sequences)
+    print(encoding)
     input_ids = encoding["input_ids"].to(model.device)
     attention_mask = encoding.get("attention_mask", None)
     if attention_mask is not None:
@@ -393,12 +394,26 @@ def calculatePerplexity(sequences, model, tokenizer_fn):
         shift_logits.view(-1, shift_logits.size(-1)),
         shift_labels.view(-1),
     )
+    print(token_losses)
     token_losses = token_losses.view(shift_labels.size())
+    print(token_losses)
     if attention_mask is not None:
         mask = attention_mask[..., 1:]
         token_losses = token_losses * mask
         per_seq_loss = token_losses.sum(dim=1) / mask.sum(dim=1)
     else:
         per_seq_loss = token_losses.mean(dim=1)
+
+    print(per_seq_loss)
     perplexities = torch.exp(per_seq_loss)
+
+    input_ids = torch.tensor(tokenizer_fn(sequences)).unsqueeze(0) 
+    input_ids = input_ids.to(model.device)
+    with torch.no_grad():
+        outputs = model(input_ids, labels=input_ids)
+    loss, logits = outputs[:2]
+    print('Alternate ppl:', math.exp(loss))
+    return math.exp(loss)
+
+
     return perplexities

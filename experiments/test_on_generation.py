@@ -19,6 +19,7 @@ def get_most_viable(model, sequences, top_k=100, batch_size = 8):
         ppls = calculatePerplexity(batch_sequences, model, tokenizer_fn)
         ppls = ppls.tolist() if hasattr(ppls, "tolist") else list(ppls)
         scored.extend(zip(batch_sequences, ppls))
+        print(ppls)
     
 
     scored.sort(key=lambda x: x[1])  # sort by perplexity
@@ -45,7 +46,7 @@ def sampling_pipeline(model, batch_size, n_samples=1000, top_k=100, max_new_toke
     return most_viable, ppls
 
 
-def get_toxicity_scores(model, n_samples=1000, top_k=100, batch_size =8, sampling_seed = 'M'):
+def get_toxicity_scores(model, n_samples=1, top_k=100, batch_size =8, sampling_seed = 'M'):
     '''
     Given a model and an initiator sequence (ej: "M" ), samples generation from the model, filters by the top-k
     sequences that are more biologically plausible and scores the probability of being toxic. 
@@ -76,7 +77,7 @@ def get_protgpt2():
 
 def main():
     model = get_protgpt2()
-    avg_toxic = get_toxicity_scores(model, batch_size=100)
+    avg_toxic = get_toxicity_scores(model, batch_size=1)
     print(f"Average Toxicity: {avg_toxic}")
 
 if __name__ == "__main__":
