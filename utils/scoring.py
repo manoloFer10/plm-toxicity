@@ -405,7 +405,8 @@ def calculatePerplexity(sequences, model, tokenizer_fn):
         per_seq_loss = token_losses.mean(dim=1)
 
     print(per_seq_loss)
-    perplexities = torch.exp(per_seq_loss, dim=1)
+    perplexities = torch.exp(per_seq_loss)
+    print(perplexities)
 
     ppls = []
     for seq in sequences:
