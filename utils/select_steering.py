@@ -250,14 +250,14 @@ def select_direction(
             json_output_all_scores.append({
                 'position': source_pos,
                 'layer': source_layer,
-                'refusal_score': ablation_tox_scores[source_pos, source_layer].item(),
-                'steering_score': steering_tox_scores[source_pos, source_layer].item(),
-                'kl_div_score': ablation_kl_div_scores[source_pos, source_layer].item()
+                'refusal_score': ablation_tox_scores[source_pos, source_layer],
+                'steering_score': steering_tox_scores[source_pos, source_layer],
+                'kl_div_score': ablation_kl_div_scores[source_pos, source_layer]
             })
 
-            ablation_tox_score = ablation_tox_scores[source_pos, source_layer].item()
-            steering_tox_score = steering_tox_scores[source_pos, source_layer].item()
-            kl_div_score = ablation_kl_div_scores[source_pos, source_layer].item()
+            ablation_tox_score = ablation_tox_scores[source_pos, source_layer]
+            steering_tox_score = steering_tox_scores[source_pos, source_layer]
+            kl_div_score = ablation_kl_div_scores[source_pos, source_layer]
 
 
             # we filter out directions if the KL threshold 
@@ -280,9 +280,9 @@ def select_direction(
             json_output_filtered_scores.append({
                 'position': source_pos,
                 'layer': source_layer,
-                'refusal_score': ablation_tox_scores[source_pos, source_layer].item(),
-                'steering_score': steering_tox_scores[source_pos, source_layer].item(),
-                'kl_div_score': ablation_kl_div_scores[source_pos, source_layer].item()
+                'refusal_score': ablation_tox_scores[source_pos, source_layer],
+                'steering_score': steering_tox_scores[source_pos, source_layer],
+                'kl_div_score': ablation_kl_div_scores[source_pos, source_layer]
             })   
 
     with open(f"{artifact_dir}/direction_evaluations.json", 'w') as f:
@@ -302,8 +302,8 @@ def select_direction(
     score, pos, layer = filtered_scores[0]
 
     print(f"Selected direction: position={pos}, layer={layer}")
-    print(f"Refusal score: {ablation_tox_scores[pos, layer]:.4f} (baseline: {baseline_tox_score:.4f})")
-    print(f"Steering score: {steering_tox_scores[pos, layer]:.4f} (baseline: {baseline_tox_score:.4f})")
+    print(f"Ablation Tox score: {ablation_tox_scores[pos, layer]:.4f} (baseline: {baseline_tox_score:.4f})")
+    print(f"Steering Tox score: {steering_tox_scores[pos, layer]:.4f} (baseline: {baseline_tox_score:.4f})")
     print(f"KL Divergence: {ablation_kl_div_scores[pos, layer]:.4f}")
     
     return pos, layer, candidate_directions[pos, layer]
