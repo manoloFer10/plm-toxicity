@@ -381,7 +381,7 @@ def get_af2_structure_batch(
     env["CUDA_VISIBLE_DEVICES"] = "1"           # "1" means physical GPU #1
     # If you run inside NVIDIA docker runtime, this also helps:
     env["NVIDIA_VISIBLE_DEVICES"] = "1"
-    env["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.30"  # lower than 0.85
+    env["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.85"  
     env["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
     env["JAX_PLATFORMS"] = "cuda"
     #env.setdefault("XLA_PYTHON_CLIENT_MEM_FRACTION", str(mem_fraction))
