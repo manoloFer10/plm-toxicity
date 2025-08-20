@@ -250,16 +250,20 @@ def select_direction(
     for source_pos in range(-n_pos, 0):
         for source_layer in range(n_layer):
 
-            ablation_tox_val = _json_sanitize(float(ablation_tox_scores[source_pos, source_layer].item()))
-            steering_tox_val = _json_sanitize(float(steering_tox_scores[source_pos, source_layer].item()))
-            kl_div_score = _json_sanitize(float(ablation_kl_div_scores[source_pos, source_layer].item()))
+            ablation_tox_score = float(ablation_tox_scores[source_pos, source_layer].item())
+            steering_tox_score = float(steering_tox_scores[source_pos, source_layer].item())
+            kl_div_score = float(ablation_kl_div_scores[source_pos, source_layer].item())
+
+            json_ablation_tox_score = _json_sanitize(ablation_tox_score)
+            json_steering_tox_score = _json_sanitize(steering_tox_score)
+            json_kl_div_score = _json_sanitize(kl_div_score)
 
             json_output_all_scores.append({
                 'position': source_pos,
                 'layer': source_layer,
-                'ablation_tox_score': ablation_tox_val,
-                'steering_score': steering_tox_val,
-                'kl_div_score': kl_div_score
+                'ablation_tox_score': json_ablation_tox_score,
+                'steering_score': json_steering_tox_score,
+                'kl_div_score': json_kl_div_score
             })
 
 
@@ -283,8 +287,8 @@ def select_direction(
             json_output_filtered_scores.append({
                 'position': source_pos,
                 'layer': source_layer,
-                'ablation_tox_score': ablation_tox_val,
-                'steering_score': steering_tox_val,
+                'ablation_tox_score': ablation_tox_score,
+                'steering_score': steering_tox_score,
                 'kl_div_score': kl_div_score
             })
 
