@@ -21,7 +21,7 @@ def main():
 
     n_samples = 1000
     top_k=50
-    batch_size=68
+    batch_size=128
 
 
     artifact_dir = 'activations'
