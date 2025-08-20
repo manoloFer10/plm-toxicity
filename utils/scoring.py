@@ -413,7 +413,7 @@ def calculatePerplexity(sequences, model, tokenizer_fn):
         input_ids = tokenizer_fn(seq)['input_ids']
         input_ids = input_ids.to(model.device)
         with torch.no_grad():
-            outputs = model(input_ids, labels=input_ids)
+            outputs = model.model(input_ids, labels=input_ids)
         loss, logits = outputs[:2]
         ppl = math.exp(loss)
         ppls.append(ppl)
