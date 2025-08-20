@@ -339,6 +339,7 @@ def get_af2_structure_batch(
     num_seeds: int = 1,
     skip_relax: bool = True,
     verbosity: str = "warn",
+    mem_fraction: int = 0.75
 ) -> List[Tuple[Path, List[float]]]:
     """Run ColabFold once for a batch of sequences.
 
@@ -377,6 +378,7 @@ def get_af2_structure_batch(
     env.setdefault("TF_CPP_MIN_LOG_LEVEL", "2" if verbosity in {"warn", "silent"} else "1")
     env.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
     #env.setdefault("XLA_PYTHON_CLIENT_MEM_FRACTION", "0.85")
+    env.setdefault("XLA_PYTHON_CLIENT_MEM_FRACTION", str(mem_fraction))
 
     log_path = td / "colabfold.log"
     stdout = open(log_path, "w")

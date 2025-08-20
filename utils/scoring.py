@@ -64,6 +64,15 @@ class ToxDL2Scorer():
     
     def _prepare_batch(self, seqs: list[str]):
         """Run AF2 once for all sequences and compute embeddings/domains."""
+
+        mem_fraction = 0.3
+        if torch.cuda.is_available():
+            try:
+                free, total = torch.cuda.mem_get_info()
+                mem_fraction = max(0.05, min(0.95, free / total))
+            except Exception:
+                pass
+
         structures = get_af2_structure_batch(
             seqs,
             msa_mode="single_sequence",
@@ -73,6 +82,7 @@ class ToxDL2Scorer():
             model_type="alphafold2_ptm",
             skip_relax=True,
             verbosity=self.af2_verbosity,
+            mem_fraction=mem_fraction
         )
         domain_lists = pfam_domains_parallel(seqs)
         prepared = []
