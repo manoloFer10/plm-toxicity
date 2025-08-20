@@ -160,9 +160,11 @@ def select_direction(
         for source_layer in tqdm(range(0, n_layer, layer_step), desc=f"Computing KL for source position {source_pos}"):
 
             ablation_dir = candidate_directions[source_pos, source_layer]
-            fwd_pre_hooks = [(model.model_block_modules[layer], get_direction_ablation_input_pre_hook(direction=ablation_dir)) for layer in range(model.model.config.num_hidden_layers)]
-            fwd_hooks = [(model.model_attn_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.model.config.num_hidden_layers)]
-            fwd_hooks += [(model.model_mlp_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.model.config.num_hidden_layers)]
+            fwd_pre_hooks = [(model.model_block_modules[layer], get_direction_ablation_input_pre_hook(direction=ablation_dir)) for layer in range(model.model.config.num_hidden_layers)
+                             if 0.2 < layer // model.model.config.num_hidden_layers < 0.8]
+            #fwd_hooks = [(model.model_attn_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.model.config.num_hidden_layers)]
+            #fwd_hooks += [(model.model_mlp_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.model.config.num_hidden_layers)]
+            fwd_hooks = []
 
             intervention_logits = get_last_position_logits(
                 model=model.model,
@@ -179,9 +181,13 @@ def select_direction(
         for source_layer in tqdm(range(0, n_layer, layer_step), desc=f"Computing refusal ablation for source position {source_pos}"):
 
             ablation_dir = candidate_directions[source_pos, source_layer]
-            fwd_pre_hooks = [(model.model_block_modules[layer], get_direction_ablation_input_pre_hook(direction=ablation_dir)) for layer in range(model.model.config.num_hidden_layers)]
-            fwd_hooks = [(model.model_attn_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.model.config.num_hidden_layers)]
-            fwd_hooks += [(model.model_mlp_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.model.config.num_hidden_layers)]
+            fwd_pre_hooks = [(model.model_block_modules[layer], get_direction_ablation_input_pre_hook(direction=ablation_dir)) for layer in range(model.model.config.num_hidden_layers)
+                             if 0.2 < layer // model.model.config.num_hidden_layers < 0.8] # ablate on intermediate layers only
+            # fwd_hooks = [(model.model_attn_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.model.config.num_hidden_layers)
+            #              if 0.2 < layer // model.model.config.num_hidden_layers < 0.8]
+            #fwd_hooks += [(model.model_mlp_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.model.config.num_hidden_layers)
+            #              if 0.2 < layer // model.model.config.num_hidden_layers < 0.8]
+            fwd_hooks = []
 
             try:
                 ablation_tox_score = get_toxicity_scores(model, 
@@ -218,7 +224,6 @@ def select_direction(
             except Exception as e:
                 print(f"Error occurred while computing toxicity scores: {e}")
                 steering_tox_score = float("nan")
-                
             steering_tox_scores[source_pos, source_layer] = steering_tox_score
 
     try:
