@@ -405,14 +405,19 @@ def calculatePerplexity(sequences, model, tokenizer_fn):
         per_seq_loss = token_losses.mean(dim=1)
 
     print(per_seq_loss)
-    perplexities = torch.exp(per_seq_loss)
+    perplexities = torch.exp(per_seq_loss, dim=1)
 
-    input_ids = tokenizer_fn(sequences)['input_ids']
-    input_ids = input_ids.to(model.device)
-    with torch.no_grad():
-        outputs = model(input_ids, labels=input_ids)
-    loss, logits = outputs[:2]
-    print('Alternate ppl:', math.exp(loss))
+    ppls = []
+    for seq in sequences:
+        input_ids = tokenizer_fn(seq)['input_ids']
+        input_ids = input_ids.to(model.device)
+        with torch.no_grad():
+            outputs = model(input_ids, labels=input_ids)
+        loss, logits = outputs[:2]
+        ppl = math.exp(loss)
+        ppls.append(ppl)
+
+    print('Alternate ppls:', ppls)
 
 
     return perplexities

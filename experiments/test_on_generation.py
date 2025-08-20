@@ -79,7 +79,7 @@ def get_protgpt2():
 
 def main():
     model = get_protgpt2()
-    avg_toxic = get_toxicity_scores(model, batch_size=1)
+    avg_toxic = get_toxicity_scores(model, batch_size=100)
     print(f"Average Toxicity: {avg_toxic}")
 
 if __name__ == "__main__":
