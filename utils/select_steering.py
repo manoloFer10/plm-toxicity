@@ -75,26 +75,28 @@ def get_toxicity_scores(model, n_samples=1000, top_k=100, batch_size =8, samplin
     sequences that are more biologically plausible and scores the probability of being toxic. 
     '''
 
-    most_viable, ppls = sampling_pipeline(model, 
-                                          batch_size=batch_size, 
-                                          n_samples=n_samples, 
-                                          top_k=top_k,
-                                          sampling_seed=sampling_seed,
-                                          fwd_pre_hooks=fwd_pre_hooks,
-                                          fwd_hooks=fwd_hooks)
+    # most_viable, ppls = sampling_pipeline(model, 
+    #                                       batch_size=batch_size, 
+    #                                       n_samples=n_samples, 
+    #                                       top_k=top_k,
+    #                                       sampling_seed=sampling_seed,
+    #                                       fwd_pre_hooks=fwd_pre_hooks,
+    #                                       fwd_hooks=fwd_hooks)
 
-    toxic_prob, non_toxic_prob = score_toxicity(most_viable, batch_size=50) 
+    # toxic_prob, non_toxic_prob = score_toxicity(most_viable, batch_size=50) 
     
-    df = pd.DataFrame(
-            zip(most_viable, toxic_prob, non_toxic_prob, ppls),
-            columns=["sequence", "tox_score", "non_tox score", "ppl"],
-        )
-    df.to_csv(artifact_path + f'/{setting}', index=False)
+    # df = pd.DataFrame(
+    #         zip(most_viable, toxic_prob, non_toxic_prob, ppls),
+    #         columns=["sequence", "tox_score", "non_tox score", "ppl"],
+    #     )
+    # df.to_csv(artifact_path + f'/{setting}', index=False)
 
-    avg_toxic_prob = sum(toxic_prob) / len(toxic_prob) if toxic_prob else 0
+    # avg_toxic_prob = sum(toxic_prob) / len(toxic_prob) if toxic_prob else 0
 
-    print(f'For {setting} got: \n Average Toxicity: {avg_toxic_prob}')
-    return avg_toxic_prob
+    # print(f'For {setting} got: \n Average Toxicity: {avg_toxic_prob}')
+    #return avg_toxic_prob
+    #debug
+    return 0.5
 
 
 def get_last_position_logits(model, instructions, tokenize_instructions_fn, fwd_pre_hooks=[], fwd_hooks=[], batch_size=32):
