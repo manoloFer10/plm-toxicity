@@ -184,7 +184,7 @@ def select_direction(
             fwd_hooks = [(model.model_attn_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.model.config.num_hidden_layers)]
             fwd_hooks += [(model.model_mlp_modules[layer], get_direction_ablation_output_hook(direction=ablation_dir)) for layer in range(model.model.config.num_hidden_layers)]
 
-            tox_scores = get_toxicity_scores(model, 
+            ablation_tox_score = get_toxicity_scores(model, 
                                              n_samples, 
                                              top_k=top_k, 
                                              batch_size=batch_size, 
@@ -192,7 +192,7 @@ def select_direction(
                                              setting= f'l{source_layer}_pos{source_pos}_toxicity_ablation', 
                                              fwd_pre_hooks=fwd_pre_hooks, fwd_hooks=fwd_hooks
             )
-            ablation_tox_scores[source_pos, source_layer] = tox_scores
+            ablation_tox_scores[source_pos, source_layer] = ablation_tox_score
 
     for source_pos in range(-n_pos, 0):
         for source_layer in tqdm(range(0, n_layer, layer_step), desc=f"Computing refusal addition for source position {source_pos}"):
@@ -203,7 +203,7 @@ def select_direction(
             fwd_pre_hooks = [(model.model_block_modules[source_layer], get_activation_addition_input_pre_hook(vector=tox_vector, coeff=coeff))]
             fwd_hooks = []
 
-            refusal_scores = get_toxicity_scores(model, 
+            steering_tox_score = get_toxicity_scores(model, 
                                                  n_samples, 
                                                  top_k=top_k, 
                                                  batch_size=batch_size, 
@@ -211,7 +211,7 @@ def select_direction(
                                                  setting= f'l{source_layer}_pos{source_pos}_toxicity_addition', 
                                                  fwd_pre_hooks=fwd_pre_hooks, 
                                                  fwd_hooks=fwd_hooks)
-            steering_tox_scores[source_pos, source_layer] = refusal_scores
+            steering_tox_scores[source_pos, source_layer] = steering_tox_score
 
     try:
         plot_tox_scores(
@@ -250,8 +250,8 @@ def select_direction(
             json_output_all_scores.append({
                 'position': source_pos,
                 'layer': source_layer,
-                'refusal_score': ablation_tox_scores[source_pos, source_layer],
-                'steering_score': steering_tox_scores[source_pos, source_layer],
+                'ablation_tox_score': ablation_tox_scores[source_pos, source_layer].item(),
+                'steering_score': steering_tox_scores[source_pos, source_layer].item(),
                 'kl_div_score': ablation_kl_div_scores[source_pos, source_layer].item()
             })
 
@@ -280,7 +280,7 @@ def select_direction(
             json_output_filtered_scores.append({
                 'position': source_pos,
                 'layer': source_layer,
-                'refusal_score': ablation_tox_scores[source_pos, source_layer],
+                'ablation_tox_score': ablation_tox_scores[source_pos, source_layer],
                 'steering_score': steering_tox_scores[source_pos, source_layer],
                 'kl_div_score': ablation_kl_div_scores[source_pos, source_layer].item()
             })   
@@ -288,7 +288,7 @@ def select_direction(
     with open(f"{artifact_dir}/direction_evaluations.json", 'w') as f:
         json.dump(json_output_all_scores, f, indent=4)
 
-    json_output_filtered_scores = sorted(json_output_filtered_scores, key=lambda x: x['refusal_score'], reverse=False)
+    json_output_filtered_scores = sorted(json_output_filtered_scores, key=lambda x: x['ablation_tox_score'], reverse=False)
 
     with open(f"{artifact_dir}/direction_evaluations_filtered.json", 'w') as f:
         json.dump(json_output_filtered_scores, f, indent=4)
