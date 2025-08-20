@@ -14,27 +14,15 @@ def get_most_viable(model, sequences, top_k=100, batch_size = 8):
     tokenizer_fn = model.tokenize_instructions_fn
     
     scored = []
-    batch_sequences = []
-    for seq in sequences:
-        batch_sequences.append(seq)
-        if len(batch_sequences) == batch_size:
-            ppls = calculatePerplexity(batch_sequences, model, tokenizer_fn)
-            ppls = ppls.tolist() if hasattr(ppls, "tolist") else list(ppls)
-            for s, ppl in zip(batch_sequences, ppls):
-                scored.append((s, float(ppl)))
-                scored.sort(key=lambda x: x[1])
-                if len(scored) > top_k:
-                    scored.pop()
-            batch_sequences = []
-
-    if batch_sequences:
+    for i in range(0, len(sequences), batch_size):
+        batch_sequences = sequences[i:i+batch_size]
         ppls = calculatePerplexity(batch_sequences, model, tokenizer_fn)
         ppls = ppls.tolist() if hasattr(ppls, "tolist") else list(ppls)
-        for s, ppl in zip(batch_sequences, ppls):
-            scored.append((s, float(ppl)))
-            scored.sort(key=lambda x: x[1])
-            if len(scored) > top_k:
-                scored.pop()
+        scored.extend(zip(batch_sequences, ppls))
+    
+
+    scored.sort(key=lambda x: x[1])  # sort by perplexity
+    scored = scored[:top_k]  # keep only top_k sequences with lowest perplexity
 
     sequences = [s for s, _ in scored]
     ppls = [p for _, p in scored]
@@ -65,7 +53,7 @@ def get_toxicity_scores(model, n_samples=1000, top_k=100, batch_size =8, samplin
 
     most_viable, ppls = sampling_pipeline(model, batch_size=batch_size, n_samples=n_samples, top_k=top_k, sampling_seed=sampling_seed)
 
-    toxic_prob, non_toxic_prob = score_toxicity(most_viable, batch_size=1) 
+    toxic_prob, non_toxic_prob = score_toxicity(most_viable, batch_size=50) 
     df = pd.DataFrame(
             zip(most_viable, toxic_prob, non_toxic_prob, ppls),
             columns=["sequence", "tox_score", "non_tox score", "ppl"],
