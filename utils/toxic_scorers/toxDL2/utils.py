@@ -406,7 +406,7 @@ def get_af2_structure_batch(
                 break
         if pdb_path is None:
             raise RuntimeError(
-                f"AF2 produced no PDB for sequence {name} (looked for patterns {best_candidates})"
+                f"AF2 produced no PDB for sequence {name} on {td} (looked for patterns {best_candidates})"
             )
         plddt = _plddt_per_residue(pdb_path)
         results.append((pdb_path, plddt))
