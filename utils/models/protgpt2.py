@@ -39,6 +39,7 @@ def tokenize_sequences_fn(sequences, tokenizer):
        prompts = [sequences]
     else:
         prompts = sequences
+        
     encoded = tokenizer(
         prompts,
         padding=True,

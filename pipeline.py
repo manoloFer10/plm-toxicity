@@ -29,7 +29,7 @@ def main():
 
     model = get_model()
     tox, non_tox = get_activation_extraction_data()
-    kl_validation_samples = [model._get_eoi_str for _ in range(32)] # generate 32 eos initiating tokens.
+    kl_validation_samples = [model.eoi_str for _ in range(32)] # generate 32 eos initiating tokens.
 
     mean_diffs = generate_directions(model.model, model.tokenizer, model.model_block_modules, tox, non_tox, artifact_dir)
 

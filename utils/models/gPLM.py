@@ -16,6 +16,7 @@ class gPLM(ABC):
         
         self.tokenize_instructions_fn = self._get_tokenize_instructions_fn()
         self.eoi_toks = self._get_eoi_toks()
+        self.eoi_str = self._get_eoi_str()
 
         self.model_block_modules = self._get_model_block_modules()
         self.model_attn_modules = self._get_attn_modules()
