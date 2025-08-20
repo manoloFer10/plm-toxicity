@@ -441,8 +441,10 @@ dependencies:
       - huggingface-hub==0.34.3
       - ipykernel==6.30.0
       - jax==0.5.3
-      - jaxlib==0.4.26
+      - jaxlib==0.5.3
       - jaxtyping==0.3.2
+      - jax-cuda12-pjrt==0.5.3
+      - jax-cuda12-plugin==0.5.3
       - jsonschema==4.25.0
       - jsonschema-specifications==2025.4.1
       - jupyter-client==8.6.3
