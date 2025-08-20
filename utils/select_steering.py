@@ -96,7 +96,7 @@ def get_toxicity_scores(model, n_samples=1000, top_k=100, batch_size =8, samplin
     # print(f'For {setting} got: \n Average Toxicity: {avg_toxic_prob}')
     #return avg_toxic_prob
     #debug
-    return 0.5
+    return torch.tensor(0.5)
 
 
 def get_last_position_logits(model, instructions, tokenize_instructions_fn, fwd_pre_hooks=[], fwd_hooks=[], batch_size=32):
