@@ -372,42 +372,6 @@ def score_toxicity(sequences, batch_size: int = 1):
 
 
 def calculatePerplexity(sequences, model, tokenizer_fn):
-    if isinstance(sequences, str):
-        sequences = [sequences]
-    encoding = tokenizer_fn(sequences)
-    print(encoding)
-    input_ids = encoding["input_ids"].to(model.device)
-    attention_mask = encoding.get("attention_mask", None)
-    if attention_mask is not None:
-        attention_mask = attention_mask.to(model.device)
-    with torch.no_grad():
-        outputs = model.model(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            labels=input_ids,
-        )
-    logits = outputs.logits
-    shift_logits = logits[:, :-1, :].contiguous()
-    shift_labels = input_ids[:, 1:].contiguous()
-    loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
-    token_losses = loss_fct(
-        shift_logits.view(-1, shift_logits.size(-1)),
-        shift_labels.view(-1),
-    )
-    print(token_losses)
-    token_losses = token_losses.view(shift_labels.size())
-    print(token_losses)
-    if attention_mask is not None:
-        mask = attention_mask[..., 1:]
-        token_losses = token_losses * mask
-        per_seq_loss = token_losses.sum(dim=1) / mask.sum(dim=1)
-    else:
-        per_seq_loss = token_losses.mean(dim=1)
-
-    print(per_seq_loss)
-    perplexities = torch.exp(per_seq_loss)
-    print(perplexities)
-
     ppls = []
     for seq in sequences:
         input_ids = tokenizer_fn(seq)['input_ids']
@@ -418,7 +382,4 @@ def calculatePerplexity(sequences, model, tokenizer_fn):
         ppl = math.exp(loss)
         ppls.append(ppl)
 
-    print('Alternate ppls:', ppls)
-
-
-    return perplexities
+    return ppls
