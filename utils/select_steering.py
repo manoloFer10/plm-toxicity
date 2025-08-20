@@ -101,7 +101,7 @@ def get_last_position_logits(model, instructions, tokenize_instructions_fn, fwd_
     last_position_logits = None
 
     for i in range(0, len(instructions), batch_size):
-        tokenized_instructions = tokenize_instructions_fn(instructions=instructions[i:i+batch_size])
+        tokenized_instructions = tokenize_instructions_fn(sequences=instructions[i:i+batch_size])
 
         with add_hooks(module_forward_pre_hooks=fwd_pre_hooks, module_forward_hooks=fwd_hooks):
             with torch.no_grad():
