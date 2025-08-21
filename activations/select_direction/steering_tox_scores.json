@@ -1,0 +1,254 @@
+[
+    {
+        "position": -1,
+        "layer": 0,
+        "steering_tox_score": 0.03315892002322926,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": 1.373860991849372
+    },
+    {
+        "position": -1,
+        "layer": 1,
+        "steering_tox_score": 0.014999983852495688,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": null
+    },
+    {
+        "position": -1,
+        "layer": 2,
+        "steering_tox_score": 0.025717433233522796,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": null
+    },
+    {
+        "position": -1,
+        "layer": 3,
+        "steering_tox_score": 5.4211752792525656e-05,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": null
+    },
+    {
+        "position": -1,
+        "layer": 4,
+        "steering_tox_score": 0.0002321576551059934,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": null
+    },
+    {
+        "position": -1,
+        "layer": 5,
+        "steering_tox_score": 0.05611352437341452,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": null
+    },
+    {
+        "position": -1,
+        "layer": 6,
+        "steering_tox_score": 0.08579552338883331,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": null
+    },
+    {
+        "position": -1,
+        "layer": 7,
+        "steering_tox_score": 0.05901303943858352,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": null
+    },
+    {
+        "position": -1,
+        "layer": 8,
+        "steering_tox_score": 0.03719772624662141,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": null
+    },
+    {
+        "position": -1,
+        "layer": 9,
+        "steering_tox_score": 0.043086568197825276,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": null
+    },
+    {
+        "position": -1,
+        "layer": 10,
+        "steering_tox_score": 0.05257362310942654,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": null
+    },
+    {
+        "position": -1,
+        "layer": 11,
+        "steering_tox_score": 0.019112792881772974,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": null
+    },
+    {
+        "position": -1,
+        "layer": 12,
+        "steering_tox_score": 0.046804558843027165,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": null
+    },
+    {
+        "position": -1,
+        "layer": 13,
+        "steering_tox_score": 0.05849321947746148,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": null
+    },
+    {
+        "position": -1,
+        "layer": 14,
+        "steering_tox_score": 0.03986421756154414,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": 13.217927013824209
+    },
+    {
+        "position": -1,
+        "layer": 15,
+        "steering_tox_score": 0.021041057451370762,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": 3.8657745322008763
+    },
+    {
+        "position": -1,
+        "layer": 16,
+        "steering_tox_score": 0.07265879594290141,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": 1.3580381427589456
+    },
+    {
+        "position": -1,
+        "layer": 17,
+        "steering_tox_score": 0.0199933800017709,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": 1.2369371854528999
+    },
+    {
+        "position": -1,
+        "layer": 18,
+        "steering_tox_score": 0.04670212774078322,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": 4.616948447497325
+    },
+    {
+        "position": -1,
+        "layer": 19,
+        "steering_tox_score": 0.042707096415352905,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": 1.0973603255962714
+    },
+    {
+        "position": -1,
+        "layer": 20,
+        "steering_tox_score": 0.03504716529238976,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": 3.572537115221929
+    },
+    {
+        "position": -1,
+        "layer": 21,
+        "steering_tox_score": 0.048699466815834286,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": null
+    },
+    {
+        "position": -1,
+        "layer": 22,
+        "steering_tox_score": 0.0397037059973286,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": 6.092763938659941
+    },
+    {
+        "position": -1,
+        "layer": 23,
+        "steering_tox_score": 0.03405791166376048,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": 0.0003557640661959109
+    },
+    {
+        "position": -1,
+        "layer": 24,
+        "steering_tox_score": 0.020305619790094626,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": 5.65065522702171
+    },
+    {
+        "position": -1,
+        "layer": 25,
+        "steering_tox_score": 0.084416397467852,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": 4.804528521171154
+    },
+    {
+        "position": -1,
+        "layer": 26,
+        "steering_tox_score": 0.02500919114301837,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": null
+    },
+    {
+        "position": -1,
+        "layer": 27,
+        "steering_tox_score": 0.07946604891186552,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": 3.425279956146354
+    },
+    {
+        "position": -1,
+        "layer": 28,
+        "steering_tox_score": 0.05370559633633889,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": null
+    },
+    {
+        "position": -1,
+        "layer": 29,
+        "steering_tox_score": 0.023982095952673036,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": null
+    },
+    {
+        "position": -1,
+        "layer": 30,
+        "steering_tox_score": 0.0002332274460843564,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": null
+    },
+    {
+        "position": -1,
+        "layer": 31,
+        "steering_tox_score": 0.015585965311865948,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": null
+    },
+    {
+        "position": -1,
+        "layer": 32,
+        "steering_tox_score": 0.04391441972935354,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": null
+    },
+    {
+        "position": -1,
+        "layer": 33,
+        "steering_tox_score": 0.056261074535464105,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": 2.908816874241153
+    },
+    {
+        "position": -1,
+        "layer": 34,
+        "steering_tox_score": 0.020309962214388407,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": 3.658924879594035
+    },
+    {
+        "position": -1,
+        "layer": 35,
+        "steering_tox_score": 0.08128245101289053,
+        "baseline_tox_score": 0.014555207111370691,
+        "kl_div_score": 4.415297443112966
+    }
+]
