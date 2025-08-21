@@ -165,6 +165,9 @@ def select_direction(
 
             ablation_kl_div_scores[source_pos, source_layer] = kl_div_fn(baseline_non_tox_logits, intervention_logits).mean(dim=0).item()
 
+    # Define helper function for JSON sanitization
+    def _json_sanitize(x: float):
+        return None if (isinstance(x, float) and (math.isnan(x) or math.isinf(x))) else x
 
     for source_pos in range(-n_pos, 0):
             for source_layer in tqdm(range(0, n_layer, layer_step), desc=f"Computing tox addition for source position {source_pos}"):
@@ -189,6 +192,23 @@ def select_direction(
                     steering_tox_score = float("nan")
                 steering_tox_scores[source_pos, source_layer] = steering_tox_score
 
+    # Save intermediate results for direction addition (steering toxicity scores)
+    json_steering_scores = []
+    for source_pos in range(-n_pos, 0):
+        for source_layer in range(n_layer):
+            steering_tox_score = float(steering_tox_scores[source_pos, source_layer].item())
+            kl_div_score = float(ablation_kl_div_scores[source_pos, source_layer].item())
+            json_steering_scores.append({
+                'position': source_pos,
+                'layer': source_layer,
+                'steering_tox_score': _json_sanitize(steering_tox_score),
+                'baseline_tox_score': baseline_tox_score,
+                'kl_div_score': _json_sanitize(kl_div_score)
+            })
+    
+    # Save steering toxicity scores to JSON
+    with open(f"{artifact_dir}/steering_tox_scores.json", 'w') as f:
+        json.dump(json_steering_scores, f, indent=4)
 
     for source_pos in range(-n_pos, 0):
         for source_layer in tqdm(range(0, n_layer, layer_step), desc=f"Computing tox ablation for source position {source_pos}"):
@@ -244,9 +264,6 @@ def select_direction(
         )
     except Exception as e: 
         print(f'Error when creating figures: {e}')
-
-    def _json_sanitize(x: float):
-        return None if (isinstance(x, float) and (math.isnan(x) or math.isinf(x))) else x
 
     filtered_scores = []
     json_output_all_scores = []

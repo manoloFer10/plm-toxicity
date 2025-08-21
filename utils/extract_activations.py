@@ -49,14 +49,39 @@ def get_direction_ablation_input_pre_hook(direction):
         else:
             activation = input # : Float[Tensor, "batch_size seq_len d_model"]
 
-        direction = direction / (direction.norm(dim=-1, keepdim=True) + 1e-8) #normalize
-        direction = direction.to(activation) 
-        activation -= (activation @ direction).unsqueeze(-1) * direction 
+        # Check for NaN or inf values
+        if torch.isnan(direction).any() or torch.isinf(direction).any():
+            print("Warning: Direction contains NaN or inf values. Skipping projection.")
+            # Just return the original input if the direction has invalid values
+            return input
 
+        # Normalize with extra stability precautions
+        direction_norm = direction.norm(dim=-1, keepdim=True)
+        if direction_norm.item() < 1e-6:  # Avoid extremely small norms
+            print("Warning: Direction norm is too small. Skipping projection.")
+            return input  # Skip the projection for tiny directions
+            
+        direction = direction / (direction_norm + 1e-8) #normalize
+        direction = direction.to(activation.dtype).to(activation.device)
+        
+        # Calculate projection safely
+        projection = (activation @ direction).unsqueeze(-1)
+        
+        # Check for NaN or inf in projection
+        if torch.isnan(projection).any() or torch.isinf(projection).any():
+            return input  # Skip modifying if projection has issues
+            
+        # Apply projection subtraction with gradient stability in mind
+        new_activation = activation - projection * direction
+        
+        # Final safety check on the result
+        if torch.isnan(new_activation).any() or torch.isinf(new_activation).any():
+            return input  # Return original if result has numerical issues
+            
         if isinstance(input, tuple):
-            return (activation, *input[1:])
+            return (new_activation, *input[1:])
         else:
-            return activation
+            return new_activation
     return hook_fn
 
 def get_direction_ablation_output_hook(direction):
