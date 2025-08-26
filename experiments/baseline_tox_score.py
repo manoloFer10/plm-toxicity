@@ -4,10 +4,10 @@ os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # stable indexing
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"        # only show GPU 0 to this process
 
 import pandas as pd
+import argparse
 from utils.scoring import score_toxicity, calculatePerplexity
 from utils.models.protgpt2 import clean_protgpt2_generation
-from tqdm import tqdm
-import gc
+
 
 def get_most_viable(model, sequences, top_k=100, batch_size = 8):
     
@@ -41,7 +41,7 @@ def sampling_pipeline(model, batch_size, n_samples=1000, top_k=100, max_new_toke
 
     generated_sequences = [seq for seq in generated_sequences if 15 < len(clean_protgpt2_generation(seq)) < 250] #limit the generated sequences for AF2 prediction (upper bound is for compute resource)
 
-    most_viable, ppls = get_most_viable(model, generated_sequences, top_k, batch_size=32) # get top_k with lowest ppl
+    most_viable, ppls = get_most_viable(model, generated_sequences, top_k, batch_size=batch_size) # get top_k with lowest ppl
 
     most_viable = [clean_protgpt2_generation(seq) for seq in most_viable] # clean special tokens and endlines
 
@@ -56,31 +56,34 @@ def get_toxicity_scores(model, n_samples=1000, top_k=100, batch_size =8, samplin
 
     most_viable, ppls = sampling_pipeline(model, batch_size=batch_size, n_samples=n_samples, top_k=top_k, sampling_seed=sampling_seed)
 
-    toxic_prob, non_toxic_prob = [0.5] * len(most_viable), [0.5] * len(most_viable) #score_toxicity(most_viable, batch_size=50) 
+    toxic_prob, non_toxic_prob = score_toxicity(most_viable, batch_size=batch_size) 
     df = pd.DataFrame(
             zip(most_viable, toxic_prob, non_toxic_prob, ppls),
             columns=["sequence", "tox_score", "non_tox score", "ppl"],
         )
-    df.to_csv("toxicity_scores.csv", index=False)
+    df.to_csv(f"results/{top_k}_baseline_toxicity_scores.csv", index=False)
 
     avg_toxic_prob = sum(toxic_prob) / len(toxic_prob) if toxic_prob else 0
-    # weights = [math.exp(-p) for p in ppls]
-    # total_w = sum(weights) + 1e-8
-    # weights = [w / total_w for w in weights]
-    # weighted_toxic_prob = sum(tp * w for tp, w in zip(toxic_prob, weights))
-    
 
-    return avg_toxic_prob #weighted_toxic_prob
+    return avg_toxic_prob 
 
 
 def get_protgpt2():
     from utils.models.protgpt2 import ProtGPT2
     return ProtGPT2("nferruz/ProtGPT2")
 
-def main():
+def main(args):
     model = get_protgpt2()
-    avg_toxic = get_toxicity_scores(model, batch_size=100)
+    avg_toxic = get_toxicity_scores(model, 
+                                    batch_size=args.batch_size, 
+                                    n_samples=args.n_samples, 
+                                    top_k=args.top_k)
     print(f"Average Toxicity: {avg_toxic}")
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--n_samples", type=int, default=1000)
+    parser.add_argument("--top_k", type=int, default=100)
+    parser.add_argument("--batch_size", type=int, default=100)
+    args = parser.parse_args()
+    main(args)
